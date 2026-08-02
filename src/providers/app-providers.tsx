@@ -1,5 +1,6 @@
 "use client";
 
+import { ApolloWrapper } from "@/apollo-wrapper";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/sonner";
 import { QueryProvider } from "@/providers/query-provider";
@@ -11,11 +12,13 @@ type AppProvidersProps = {
 
 export function AppProviders({ children }: AppProvidersProps) {
   return (
-    <ThemeProvider>
-      <QueryProvider>
-        <TooltipProvider>{children}</TooltipProvider>
-        <Toaster />
-      </QueryProvider>
-    </ThemeProvider>
+    <ApolloWrapper>
+      <ThemeProvider>
+        <QueryProvider>
+          <TooltipProvider>{children}</TooltipProvider>
+          <Toaster />
+        </QueryProvider>
+      </ThemeProvider>
+    </ApolloWrapper>
   );
 }
