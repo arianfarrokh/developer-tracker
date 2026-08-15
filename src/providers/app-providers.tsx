@@ -2,7 +2,7 @@
 
 import { ApolloWrapper } from "@/apollo-wrapper";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { Toaster } from "@/components/ui/sonner";
+import { AlertProvider } from "@/providers/alert-provider";
 import { QueryProvider } from "@/providers/query-provider";
 import { ThemeProvider } from "@/providers/theme-provider";
 
@@ -15,8 +15,9 @@ export function AppProviders({ children }: AppProvidersProps) {
     <ApolloWrapper>
       <ThemeProvider>
         <QueryProvider>
-          <TooltipProvider>{children}</TooltipProvider>
-          <Toaster />
+          <AlertProvider>
+            <TooltipProvider>{children}</TooltipProvider>
+          </AlertProvider>
         </QueryProvider>
       </ThemeProvider>
     </ApolloWrapper>

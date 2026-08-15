@@ -2,7 +2,7 @@ import { SingleData } from "@/graphql/query-types";
 import { gql, TypedDocumentNode } from "@apollo/client";
 
 export const AllProjectsQueryResult: TypedDocumentNode<
-  SingleData<AllProjectsQueryResultType>
+  SingleData<AllProjectsQueryResultType[]>
 > = gql`
   query allProjectsQuery {
     result: allProjects {
