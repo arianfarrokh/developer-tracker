@@ -2,13 +2,18 @@
 
 import MainCard from "@/components/cards/MainCard";
 import { MainCardSkeleton } from "@/components/cards/MainCardSkeleton";
-import { useQuery } from "@apollo/client/react";
-import { AllProjectsQueryResult } from "./graphql";
+import { useMutation, useQuery } from "@apollo/client/react";
+import { AllProjectsQueryResult } from "./query";
+import { Button } from "@/components/ui/button";
+import { PlusIcon } from "lucide-react";
+import { createProjectMutation } from "./mutation";
 
 const SKELETON_COUNT = 6;
 
 export default function ProjectsPage() {
   const { data, loading } = useQuery(AllProjectsQueryResult);
+
+  const [createProject] = useMutation(createProjectMutation)
 
   const projects = data?.result ?? [];
 
@@ -34,17 +39,22 @@ export default function ProjectsPage() {
   }
 
   return (
-    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-      {projects.map((project) => (
-        <MainCard
-          key={project.id}
-          title={project.name}
-          description={project.description}
-          progress={project.progress}
-          active={project.projectStatus}
-          technologies={project.tecknologies}
-        />
-      ))}
+    <div>
+      <Button size='icon'>
+        <PlusIcon />
+      </Button>
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        {projects.map((project) => (
+          <MainCard
+            key={project.id}
+            title={project.name}
+            description={project.description}
+            progress={project.progress}
+            active={project.projectStatus}
+            technologies={project.tecknologies}
+          />
+        ))}
+      </div>
     </div>
   );
 }
