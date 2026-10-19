@@ -25,7 +25,9 @@ export default function ProjectsPage() {
   if (projects.length === 0) {
     return (
       <div className="flex min-h-[40vh] flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-border bg-card/40 px-6 text-center">
-        <p className="text-base font-medium text-foreground">پروژه ای یافت نشد.</p>
+        <p className="text-base font-medium text-foreground">
+          پروژه ای یافت نشد.
+        </p>
         <p className="max-w-sm text-sm text-muted-foreground">
           پروژه های شما در اینجا ظاهر خواهند شد.
         </p>
