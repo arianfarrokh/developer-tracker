@@ -2,8 +2,8 @@ import { InputVariable, ResultData } from "@/graphql/query-types";
 import { gql, TypedDocumentNode } from "@apollo/client";
 
 export const createProjectMutation: TypedDocumentNode<
-  ResultData<createProjectInputType>,
-  InputVariable<CreateProjectVaribleType>
+  ResultData<CreateProjectVaribleType>,
+  InputVariable<createProjectInputType>
 > = gql`
   mutation createProject($input: CreateProjectInput!) {
     result: createProject(input: $input) {
