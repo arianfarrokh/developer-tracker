@@ -5,9 +5,9 @@ import MainCard from "@/components/cards/MainCard";
 import { useQuery } from "@apollo/client/react";
 import { Button } from "@/components/ui/button";
 import { FolderKanban, PlusIcon } from "lucide-react";
-import { AddProjectDialog } from "@/containers/projects/ui/AddProjectDialog/CustomDialog";
+import { AddProjectDialog } from "@/containers/projects/ui/CustomDialog";
 import { AllProjectsQueryResult } from "./graphql/query";
-import { LoadingProjects } from "./ui/AddProjectDialog/LoadingProjects";
+import { LoadingProjects } from "./ui/LoadingProjects";
 
 export default function ProjectsPageView() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);

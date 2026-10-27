@@ -12,14 +12,15 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Plus, Pin } from "lucide-react";
-import { createProjectMutation } from "../../graphql/mutation";
+import { createProjectMutation } from "../graphql/mutation";
 import { useMutation } from "@apollo/client/react";
 import { useFormik } from "formik";
-import { projectSchema } from "../../graphql/projectSchema";
+import { projectSchema } from "../graphql/projectSchema";
 import { useState } from "react";
 import { useAlert } from "@/providers/alert-provider";
 import { cn } from "@/lib/utils";
-import { AllProjectsQueryResult } from "../../graphql/query";
+import { AllProjectsQueryResult } from "../graphql/query";
+import { CustomInputWithLabel } from "@/components/input/CustomInputWithLable";
 
 const initialValues: createProjectInputType = {
   name: "",
@@ -118,9 +119,7 @@ export function AddProjectDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent
-        className="flex max-h-[min(90vh,720px)] flex-col gap-0 overflow-hidden p-0 sm:max-w-xl"
-      >
+      <DialogContent className="flex max-h-[min(90vh,720px)] flex-col gap-0 overflow-hidden p-0 sm:max-w-xl">
         <DialogHeader className="space-y-2 border-b border-border/60 bg-muted/20 px-5 py-5 text-right sm:px-6">
           <DialogTitle className="text-xl font-semibold tracking-tight">
             افزودن پروژه جدید
@@ -140,49 +139,33 @@ export function AddProjectDialog({
               <p className="text-xs font-medium text-muted-foreground">
                 اطلاعات اصلی
               </p>
+              <CustomInputWithLabel
+                id="name"
+                name="name"
+                label="نام پروژه"
+                value={formik.values.name}
+                onChange={formik.handleChange}
+                onBlur={formik.handleBlur}
+                placeholder="مثلاً وب‌سایت فروشگاهی"
+                error={formik.touched.name ? formik.errors.name : undefined}
+              />
 
-              <div className="space-y-2">
-                <Label htmlFor="project-name">نام پروژه</Label>
-                <Input
-                  onChange={formik.handleChange}
-                  onBlur={formik.handleBlur}
-                  id="name"
-                  name="name"
-                  value={formik.values.name}
-                  placeholder="مثلاً وب‌سایت فروشگاهی"
-                  className={
-                    formik.touched.name && formik.errors.name
-                      ? "border-destructive focus-visible:ring-destructive"
-                      : ""
-                  }
-                />
-
-                {formik.touched.name && formik.errors.name && (
-                  <p className="text-sm text-destructive">
-                    {formik.errors.name}
-                  </p>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="project-description">توضیحات</Label>
-                <Textarea
-                  id="description"
-                  name="description"
-                  value={formik.values.description}
-                  onChange={formik.handleChange}
-                  onBlur={formik.handleBlur}
-                  placeholder="توضیح کوتاهی درباره پروژه..."
-                  rows={3}
-                  className="min-h-[5.5rem] resize-none"
-                />
-
-                {formik.touched.description && formik.errors.description && (
-                  <p className="text-sm text-destructive">
-                    {formik.errors.description}
-                  </p>
-                )}
-              </div>
+              <CustomInputWithLabel
+                id="description"
+                name="description"
+                label="توضیحات"
+                value={formik.values.description}
+                onChange={formik.handleChange}
+                onBlur={formik.handleBlur}
+                placeholder="توضیح کوتاهی درباره پروژه..."
+                multiline
+                rows={3}
+                error={
+                  formik.touched.description
+                    ? formik.errors.description
+                    : undefined
+                }
+              />
             </section>
 
             <section className="space-y-3 rounded-xl border border-border/60 bg-muted/15 p-4">
@@ -324,9 +307,7 @@ export function AddProjectDialog({
                       max={100}
                       className="pe-9"
                     />
-                    <span
-                      className="pointer-events-none absolute end-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground"
-                    >
+                    <span className="pointer-events-none absolute end-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
                       %
                     </span>
                   </div>
@@ -394,9 +375,7 @@ export function AddProjectDialog({
             </section>
           </div>
 
-          <div
-            className="flex shrink-0 flex-col-reverse gap-2 border-t border-border/60 bg-muted/20 px-5 py-4 sm:flex-row sm:justify-end sm:px-6"
-          >
+          <div className="flex shrink-0 flex-col-reverse gap-2 border-t border-border/60 bg-muted/20 px-5 py-4 sm:flex-row sm:justify-end sm:px-6">
             <Button
               type="button"
               variant="outline"
