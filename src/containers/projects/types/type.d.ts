@@ -10,11 +10,23 @@ type AllProjectsQueryResultType = {
   tecknologies: string[];
 };
 
-type CreateProjectVaribleType = {
+type ResultSucessType = {
   isSuccess: boolean;
 };
 
 type createProjectInputType = {
+  color: string;
+  description: string;
+  isPinned: boolean;
+  name: string;
+  progress: number;
+  progressMode: ProgressModeEnum;
+  projectStatus: ProjectStatusEnum;
+  tecknologies: string[];
+};
+
+type updateProjectType = {
+  id: string;
   color: string;
   description: string;
   isPinned: boolean;

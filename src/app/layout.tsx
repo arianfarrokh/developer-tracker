@@ -29,8 +29,10 @@ export default function RootLayout({
       dir="rtl"
       className={`${fontSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">
-        <DirectionProvider direction="rtl">{children}</DirectionProvider>
+      <body className="min-h-full flex flex-col ">
+        <div>
+          <DirectionProvider direction="rtl">{children}</DirectionProvider>
+        </div>
       </body>
     </html>
   );
