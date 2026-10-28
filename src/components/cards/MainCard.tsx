@@ -34,6 +34,8 @@ type MainCardProps = {
   isPinned?: boolean;
   onTogglePin?: (id: string) => void;
   handleEditProject: (id: string) => void;
+  handleDeleteProject: (id: string, name: string) => void;
+  name: string;
 };
 
 export default function MainCard({
@@ -46,7 +48,9 @@ export default function MainCard({
   color,
   onTogglePin,
   handleEditProject,
+  handleDeleteProject,
   isPinned = false,
+  name,
 }: MainCardProps) {
   const statusKey = active ?? "ACTIVE";
   const statusLabel = STATUS_LABELS[statusKey] ?? statusKey;
@@ -160,7 +164,7 @@ export default function MainCard({
             >
               به‌روزرسانی
             </Button>
-            <Button variant="destructive">حذف</Button>
+            <Button onClick={() => handleDeleteProject(id , name)} variant="destructive">حذف</Button>
           </div>
         </div>
       </CardContent>

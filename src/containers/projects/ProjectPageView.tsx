@@ -10,12 +10,15 @@ import { EmptyProjectsState } from "./ui/EmptyProjectsState";
 import ProjectHeader from "./ui/ProjectHeader";
 import { updateProjectMutation } from "./graphql/mutation";
 import { EditProjectDialog } from "./ui/EditProjectDialog";
+import { DeleteProjectDialog } from "./ui/DeleteProjectDialog";
 
 export default function ProjectsPageView() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [editingProject, setEditingProject] =
     useState<AllProjectsQueryResultType | null>(null);
+  const [deletingProject, setDeletingProject] = useState<{id: string, name: string} | null>(null);
 
   const { data, loading } = useQuery(AllProjectsQueryResult);
   const projects = data?.result ?? [];
@@ -68,6 +71,7 @@ export default function ProjectsPageView() {
           {sortedProjects.map((project) => (
             <MainCard
               key={project.id}
+              name={project.name}
               id={project.id}
               title={project.name}
               description={project.description}
@@ -84,6 +88,10 @@ export default function ProjectsPageView() {
                 if (!projectToEdit) return;
                 setEditingProject(projectToEdit);
                 setIsUpdateModalOpen(true);
+              }}
+              handleDeleteProject={(id, name) => {
+                setDeletingProject({id, name});
+                setIsDeleteModalOpen(true);
               }}
             />
           ))}
@@ -104,6 +112,13 @@ export default function ProjectsPageView() {
       <AddProjectDialog
         open={isCreateModalOpen}
         onOpenChange={setIsCreateModalOpen}
+      />
+
+      <DeleteProjectDialog
+        id={deletingProject?.id ?? null}
+        open={isDeleteModalOpen}
+        onOpenChange={setIsDeleteModalOpen}
+        name={deletingProject?.name ?? ""}
       />
     </div>
   );
