@@ -9,10 +9,17 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Pin, Save } from "lucide-react";
+import { updateProjectMutation } from "../graphql/mutation";
+import { useMutation } from "@apollo/client/react";
+import { useFormik } from "formik";
+import { projectSchema } from "../graphql/projectSchema";
+import { useState } from "react";
+import { useAlert } from "@/providers/alert-provider";
 import { cn } from "@/lib/utils";
+import { AllProjectsQueryResult } from "../graphql/query";
+import { CustomInputWithLabel } from "@/components/input/CustomInputWithLable";
 
 const PROJECT_COLORS = [
   "#8B5CF6",
@@ -26,27 +33,96 @@ const PROJECT_COLORS = [
 const selectClassName =
   "h-10 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none transition-colors focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40";
 
-/** Static sample data for layout preview — wire to real values when adding logic. */
-const UI_PREVIEW = {
-  name: "وب‌سایت فروشگاهی",
-  description: "پیاده‌سازی فروشگاه با Next.js و اتصال به API.",
-  color: "#8B5CF6",
-  tecknologies: ["Next.js", "TypeScript", "GraphQL"],
-  progress: "42",
-  progressMode: "MANUAL",
-  projectStatus: "ACTIVE",
-  isPinned: true,
-} as const;
+function toFormValues(project: AllProjectsQueryResultType): updateProjectType {
+  return {
+    id: String(project.id),
+    name: project.name,
+    description: project.description,
+    color: project.color,
+    tecknologies: [...project.tecknologies],
+    progress: project.progress,
+    progressMode: project.progressMode,
+    projectStatus: project.projectStatus,
+    isPinned: project.isPinned,
+  };
+}
 
-type EditProjectDialogProps = {
+export type EditProjectDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  project: AllProjectsQueryResultType;
 };
 
 export function EditProjectDialog({
   open,
   onOpenChange,
+  project,
 }: EditProjectDialogProps) {
+  const [technologyInput, setTechnologyInput] = useState("");
+
+  const { success, error: showError } = useAlert();
+
+  const [updateProject, { loading }] = useMutation(updateProjectMutation);
+
+  const formik = useFormik<updateProjectType>({
+    initialValues: toFormValues(project),
+    enableReinitialize: true,
+    validationSchema: projectSchema,
+    onSubmit: async (values, helpers) => {
+      try {
+        await updateProject({
+          variables: {
+            input: {
+              id: values.id,
+              color: values.color,
+              description: values.description,
+              isPinned: values.isPinned,
+              name: values.name,
+              progress: values.progress,
+              progressMode: values.progressMode,
+              projectStatus: values.projectStatus,
+              tecknologies: values.tecknologies,
+            },
+          },
+          refetchQueries: [{ query: AllProjectsQueryResult }],
+        });
+
+        setTechnologyInput("");
+        onOpenChange(false);
+        success("موفق", ["پروژه با موفقیت به‌روزرسانی شد."]);
+      } catch {
+        showError("خطا", ["به‌روزرسانی پروژه ناموفق بود. دوباره تلاش کنید."]);
+      } finally {
+        helpers.setSubmitting(false);
+      }
+    },
+  });
+
+  const handleAddTechnology = () => {
+    const technology = technologyInput.trim();
+
+    if (!technology) return;
+
+    const alreadyExists = formik.values.tecknologies.some(
+      (item: string) => item.toLowerCase() === technology.toLowerCase(),
+    );
+
+    if (alreadyExists) return;
+
+    formik.setFieldValue("tecknologies", [
+      ...formik.values.tecknologies,
+      technology,
+    ]);
+    setTechnologyInput("");
+  };
+
+  const handleRemoveTechnology = (technology: string) => {
+    formik.setFieldValue(
+      "tecknologies",
+      formik.values.tecknologies.filter((item: string) => item !== technology),
+    );
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="flex max-h-[min(90vh,720px)] flex-col gap-0 overflow-hidden p-0 sm:max-w-xl">
@@ -59,33 +135,43 @@ export function EditProjectDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex min-h-0 flex-1 flex-col">
+        <form
+          className="flex min-h-0 flex-1 flex-col"
+          onSubmit={formik.handleSubmit}
+          noValidate
+        >
           <div className="min-h-0 flex-1 space-y-6 overflow-y-auto px-5 py-5 sm:px-6">
             <section className="space-y-4 rounded-xl border border-border/60 bg-muted/15 p-4">
               <p className="text-xs font-medium text-muted-foreground">
                 اطلاعات اصلی
               </p>
-              <div className="space-y-2">
-                <Label htmlFor="edit-project-name">نام پروژه</Label>
-                <Input
-                  id="edit-project-name"
-                  name="name"
-                  defaultValue={UI_PREVIEW.name}
-                  placeholder="مثلاً وب‌سایت فروشگاهی"
-                />
-              </div>
+              <CustomInputWithLabel
+                id="edit-project-name"
+                name="name"
+                label="نام پروژه"
+                value={formik.values.name}
+                onChange={formik.handleChange}
+                onBlur={formik.handleBlur}
+                placeholder="مثلاً وب‌سایت فروشگاهی"
+                error={formik.touched.name ? formik.errors.name : undefined}
+              />
 
-              <div className="space-y-2">
-                <Label htmlFor="edit-project-description">توضیحات</Label>
-                <Textarea
-                  id="edit-project-description"
-                  name="description"
-                  defaultValue={UI_PREVIEW.description}
-                  placeholder="توضیح کوتاهی درباره پروژه..."
-                  rows={3}
-                  className="min-h-[5.5rem] resize-none"
-                />
-              </div>
+              <CustomInputWithLabel
+                id="edit-project-description"
+                name="description"
+                label="توضیحات"
+                value={formik.values.description}
+                onChange={formik.handleChange}
+                onBlur={formik.handleBlur}
+                placeholder="توضیح کوتاهی درباره پروژه..."
+                multiline
+                rows={3}
+                error={
+                  formik.touched.description
+                    ? formik.errors.description
+                    : undefined
+                }
+              />
             </section>
 
             <section className="space-y-3 rounded-xl border border-border/60 bg-muted/15 p-4">
@@ -98,11 +184,12 @@ export function EditProjectDialog({
                   <button
                     key={color}
                     type="button"
+                    onClick={() => formik.setFieldValue("color", color)}
                     aria-label={`انتخاب رنگ ${color}`}
-                    aria-pressed={color === UI_PREVIEW.color}
+                    aria-pressed={formik.values.color === color}
                     className={cn(
                       "size-9 rounded-full border-2 shadow-sm transition-transform hover:scale-105",
-                      color === UI_PREVIEW.color
+                      formik.values.color === color
                         ? "border-foreground ring-2 ring-ring/50 ring-offset-2 ring-offset-background"
                         : "border-transparent",
                     )}
@@ -117,13 +204,15 @@ export function EditProjectDialog({
                   <input
                     type="color"
                     name="color"
-                    defaultValue={UI_PREVIEW.color}
+                    value={formik.values.color}
+                    onChange={formik.handleChange}
+                    onBlur={formik.handleBlur}
                     aria-label="انتخاب رنگ دلخواه"
                     className="absolute inset-0 size-full cursor-pointer border-0 bg-transparent opacity-0"
                   />
                   <span
                     className="size-6 rounded-full border border-border/60"
-                    style={{ backgroundColor: UI_PREVIEW.color }}
+                    style={{ backgroundColor: formik.values.color }}
                   />
                 </label>
               </div>
@@ -140,35 +229,69 @@ export function EditProjectDialog({
               <div className="flex gap-2">
                 <Input
                   id="edit-technology-input"
+                  value={technologyInput}
+                  onChange={(event) => setTechnologyInput(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") {
+                      event.preventDefault();
+                      handleAddTechnology();
+                    }
+                  }}
                   placeholder="مثلاً Next.js"
                   dir="ltr"
                   className="text-left"
                 />
 
-                <Button type="button" variant="secondary" className="shrink-0">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={handleAddTechnology}
+                  disabled={!technologyInput.trim()}
+                  className="shrink-0"
+                >
                   افزودن
                 </Button>
               </div>
 
-              <div className="min-h-[2.5rem] rounded-lg border border-dashed border-border/70 p-2">
-                <div className="flex flex-wrap gap-2">
-                  {UI_PREVIEW.tecknologies.map((technology) => (
-                    <span
-                      key={technology}
-                      className="inline-flex items-center gap-1.5 rounded-full border border-border/80 bg-background px-3 py-1 text-sm shadow-sm"
-                      dir="ltr"
-                    >
-                      {technology}
-                      <button
-                        type="button"
-                        aria-label={`حذف ${technology}`}
-                        className="rounded-full px-0.5 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+              {formik.submitCount > 0 && formik.errors.tecknologies && (
+                <p className="text-sm text-destructive">
+                  {formik.errors.tecknologies}
+                </p>
+              )}
+
+              <div
+                className={cn(
+                  "min-h-[2.5rem] rounded-lg border border-dashed border-border/70 p-2",
+                  formik.values.tecknologies.length === 0 &&
+                    "flex items-center justify-center",
+                )}
+              >
+                {formik.values.tecknologies.length === 0 ? (
+                  <p className="text-xs text-muted-foreground">
+                    هنوز تکنولوژی اضافه نکردی
+                  </p>
+                ) : (
+                  <div className="flex flex-wrap gap-2">
+                    {formik.values.tecknologies.map((technology: string) => (
+                      <span
+                        key={technology}
+                        className="inline-flex items-center gap-1.5 rounded-full border border-border/80 bg-background px-3 py-1 text-sm shadow-sm"
+                        dir="ltr"
                       >
-                        ×
-                      </button>
-                    </span>
-                  ))}
-                </div>
+                        {technology}
+
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveTechnology(technology)}
+                          aria-label={`حذف ${technology}`}
+                          className="rounded-full px-0.5 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+                        >
+                          ×
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
               </div>
             </section>
 
@@ -184,16 +307,23 @@ export function EditProjectDialog({
                     <Input
                       id="edit-project-progress"
                       name="progress"
+                      onChange={formik.handleChange}
+                      onBlur={formik.handleBlur}
+                      value={formik.values.progress}
                       type="number"
                       min={0}
                       max={100}
-                      defaultValue={UI_PREVIEW.progress}
                       className="pe-9"
                     />
                     <span className="pointer-events-none absolute end-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
                       %
                     </span>
                   </div>
+                  {formik.touched.progress && formik.errors.progress && (
+                    <p className="text-sm text-destructive">
+                      {formik.errors.progress}
+                    </p>
+                  )}
                 </div>
 
                 <div className="space-y-2">
@@ -201,7 +331,9 @@ export function EditProjectDialog({
                   <select
                     id="edit-progress-mode"
                     name="progressMode"
-                    defaultValue={UI_PREVIEW.progressMode}
+                    value={formik.values.progressMode}
+                    onChange={formik.handleChange}
+                    onBlur={formik.handleBlur}
                     className={selectClassName}
                   >
                     <option value="AUTOMATIC">خودکار</option>
@@ -215,7 +347,9 @@ export function EditProjectDialog({
                 <select
                   id="edit-project-status"
                   name="projectStatus"
-                  defaultValue={UI_PREVIEW.projectStatus}
+                  value={formik.values.projectStatus}
+                  onChange={formik.handleChange}
+                  onBlur={formik.handleBlur}
                   className={selectClassName}
                 >
                   <option value="ACTIVE">فعال</option>
@@ -229,7 +363,7 @@ export function EditProjectDialog({
               <label
                 className={cn(
                   "flex cursor-pointer items-center gap-3 rounded-lg border p-3 transition-colors",
-                  UI_PREVIEW.isPinned
+                  formik.values.isPinned
                     ? "border-primary/40 bg-primary/5"
                     : "border-border hover:bg-muted/40",
                 )}
@@ -237,14 +371,15 @@ export function EditProjectDialog({
                 <input
                   type="checkbox"
                   name="isPinned"
-                  defaultChecked={UI_PREVIEW.isPinned}
+                  checked={formik.values.isPinned}
+                  onChange={formik.handleChange}
                   className="size-4 accent-primary"
                 />
                 <div className="flex flex-1 items-center gap-2">
                   <Pin
                     className={cn(
                       "size-4",
-                      UI_PREVIEW.isPinned
+                      formik.values.isPinned
                         ? "text-primary"
                         : "text-muted-foreground",
                     )}
@@ -264,12 +399,16 @@ export function EditProjectDialog({
             >
               انصراف
             </Button>
-            <Button type="button" className="gap-2 sm:min-w-[10rem]">
+            <Button
+              type="submit"
+              className="gap-2 sm:min-w-[10rem]"
+              disabled={loading || formik.isSubmitting}
+            >
               <Save className="size-4" />
-              ذخیره تغییرات
+              {loading ? "در حال ذخیره..." : "ذخیره تغییرات"}
             </Button>
           </div>
-        </div>
+        </form>
       </DialogContent>
     </Dialog>
   );

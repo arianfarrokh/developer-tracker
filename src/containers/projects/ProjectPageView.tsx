@@ -14,6 +14,8 @@ import { EditProjectDialog } from "./ui/EditProjectDialog";
 export default function ProjectsPageView() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
+  const [editingProject, setEditingProject] =
+    useState<AllProjectsQueryResultType | null>(null);
 
   const { data, loading } = useQuery(AllProjectsQueryResult);
   const projects = data?.result ?? [];
@@ -75,16 +77,29 @@ export default function ProjectsPageView() {
               color={project.color}
               isPinned={project.isPinned}
               onTogglePin={handleTogglePin}
-              handleEditProject={() => setIsUpdateModalOpen(true)}
+              handleEditProject={(id) => {
+                const projectToEdit = sortedProjects.find(
+                  (item) => item.id === id,
+                );
+                if (!projectToEdit) return;
+                setEditingProject(projectToEdit);
+                setIsUpdateModalOpen(true);
+              }}
             />
           ))}
         </div>
       )}
 
-      <EditProjectDialog
-        open={isUpdateModalOpen}
-        onOpenChange={setIsUpdateModalOpen}
-      />
+      {editingProject && (
+        <EditProjectDialog
+          open={isUpdateModalOpen}
+          onOpenChange={(open) => {
+            setIsUpdateModalOpen(open);
+            if (!open) setEditingProject(null);
+          }}
+          project={editingProject}
+        />
+      )}
 
       <AddProjectDialog
         open={isCreateModalOpen}

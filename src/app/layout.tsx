@@ -27,7 +27,9 @@ export default function RootLayout({
     <html
       lang="fa"
       dir="rtl"
-      className={`${fontSans.variable} ${geistMono.variable} h-full antialiased`}
+      suppressHydrationWarning
+      className={`${fontSans.variable} ${geistMono.variable} dark h-full antialiased`}
+      style={{ colorScheme: "dark" }}
     >
       <body className="min-h-full flex flex-col ">
         <div>

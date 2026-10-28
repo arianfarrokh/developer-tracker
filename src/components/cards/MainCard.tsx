@@ -5,8 +5,6 @@ import { CustomProgress } from "../progress/CustomProgress";
 import { cn } from "@/lib/utils";
 import { Button } from "../ui/button";
 import { colors } from "@/lib/color";
-import { Dispatch, SetStateAction } from "react";
-
 const brandPurple = colors.primary.DEFAULT;
 
 const STATUS_LABELS: Record<string, string> = {
@@ -35,7 +33,7 @@ type MainCardProps = {
   color?: string;
   isPinned?: boolean;
   onTogglePin?: (id: string) => void;
-  handleEditProject: () => void;
+  handleEditProject: (id: string) => void;
 };
 
 export default function MainCard({
@@ -158,7 +156,7 @@ export default function MainCard({
             <Button
               variant="default"
               className="border-primary/40 hover:bg-primary/10 hover:text-primary"
-              onClick={handleEditProject}
+              onClick={() => handleEditProject(id)}
             >
               به‌روزرسانی
             </Button>
