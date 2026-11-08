@@ -1,4 +1,5 @@
 import type { TrackerCardData } from "@/components/cards/tracker-card";
+import { normalizeWorkItemStatus } from "./workItemStatusApi";
 
 export function mapGoalToTrackerCard(
   goal: AllGoalsQueryResultType,
@@ -14,7 +15,7 @@ export function mapGoalToTrackerCard(
       id: item.id,
       task: item.task,
       count: item.count,
-      status: item.workItemStatus,
+      status: normalizeWorkItemStatus(item.workItemStatus),
       completedAt: item.completedAt,
     })),
   };

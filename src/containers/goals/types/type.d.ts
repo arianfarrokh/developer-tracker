@@ -17,3 +17,16 @@ type AllGoalsQueryResultType = {
   goalStatus: string;
   workItems: GoalWorkItemQueryResultType[];
 };
+
+type WorkItemStatusEnum = "TODO" | "IN_PROGRESS" | "COMPLETED" | "CANCELLED";
+
+type UpdateWorkItemStatusInput = {
+  id: ID;
+  newStatus: WorkItemStatusEnum;
+};
+
+type ChangeWorkItemStatusMutationData = {
+  updateWorkItemStatus: {
+    workItemDto: GoalWorkItemQueryResultType | null;
+  } | null;
+};

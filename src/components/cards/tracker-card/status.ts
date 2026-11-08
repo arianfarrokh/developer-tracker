@@ -9,6 +9,7 @@ export const TRACKER_STATUS_STYLES: Record<string, string> = {
   IN_PROGRESS: "border-info/40 bg-info/15 text-info",
   DONE: "border-success/40 bg-success/15 text-success",
   COMPLETED: "border-success/40 bg-success/15 text-success",
+  CANCELLED: "border-destructive/40 bg-destructive/15 text-destructive",
   BLOCKED: "border-destructive/40 bg-destructive/15 text-destructive",
   ON_HOLD: "border-warning/40 bg-warning/15 text-warning",
   PAUSED: "border-warning/40 bg-warning/15 text-warning",
@@ -22,6 +23,7 @@ export const TRACKER_STATUS_DOT: Record<string, string> = {
   IN_PROGRESS: "bg-info",
   DONE: "bg-success",
   COMPLETED: "bg-success",
+  CANCELLED: "bg-destructive",
   BLOCKED: "bg-destructive",
   ON_HOLD: "bg-warning",
   PAUSED: "bg-warning",
@@ -88,8 +90,8 @@ export type TrackerStatusOption = {
 export const DEFAULT_WORK_ITEM_STATUS_OPTIONS: TrackerStatusOption[] = [
   { value: "TODO", label: "Todo" },
   { value: "IN_PROGRESS", label: "In progress" },
-  { value: "DONE", label: "Done" },
-  { value: "BLOCKED", label: "Blocked" },
+  { value: "COMPLETED", label: "Completed" },
+  { value: "CANCELLED", label: "Cancelled" },
 ];
 
 export function mergeWorkItemStatusOptions(

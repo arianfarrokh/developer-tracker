@@ -211,13 +211,14 @@ export function TrackerCard({
                   } as CSSProperties
                 }
               >
-                {workItems.map((item) => {
+                {workItems.map((item, index) => {
+                  const rowId = item.id || `${data.id}-work-item-${index}`;
                   const isDone = Boolean(item.completedAt);
                   const canToggle = Boolean(actions?.onToggleWorkItemComplete);
 
                   return (
                     <li
-                      key={item.id}
+                      key={rowId}
                       className="flex flex-wrap items-center gap-x-2 gap-y-1.5 px-3 py-2.5 text-sm sm:flex-nowrap"
                     >
                       <span className="min-w-0 flex-1 truncate font-medium">
@@ -227,13 +228,15 @@ export function TrackerCard({
                         {item.count ?? 0}
                       </span>
                       <WorkItemStatusSelect
+                        instanceId={`${data.id}-${rowId}`}
                         value={item.status}
+                        disabled={item.statusChangePending}
                         options={workItemStatusOptions}
                         onChange={
                           canChangeWorkItemStatus
                             ? (status) =>
                                 actions?.onWorkItemStatusChange?.(
-                                  item.id,
+                                  rowId,
                                   status,
                                   data.id,
                                 )
@@ -254,7 +257,7 @@ export function TrackerCard({
                           title={labels.toggleWorkItem}
                           onClick={() =>
                             actions?.onToggleWorkItemComplete?.(
-                              item.id,
+                              rowId,
                               !isDone,
                             )
                           }

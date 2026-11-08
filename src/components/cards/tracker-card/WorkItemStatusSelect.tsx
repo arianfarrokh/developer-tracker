@@ -24,6 +24,8 @@ type WorkItemStatusSelectProps = {
   options?: TrackerStatusOption[];
   onChange?: (status: string) => void;
   readOnly?: boolean;
+  /** Unique id per row — prevents multiple selects from sharing state */
+  instanceId: string;
 };
 
 export function WorkItemStatusSelect({
@@ -32,6 +34,7 @@ export function WorkItemStatusSelect({
   options = DEFAULT_WORK_ITEM_STATUS_OPTIONS,
   onChange,
   readOnly = false,
+  instanceId,
 }: WorkItemStatusSelectProps) {
   const current = (value ?? "TODO").toUpperCase();
   const mergedOptions = mergeWorkItemStatusOptions(current, options);
@@ -50,6 +53,7 @@ export function WorkItemStatusSelect({
   return (
     <Select
       value={current}
+      name={`work-item-status-${instanceId}`}
       disabled={disabled}
       onValueChange={(next) => {
         if (next != null && typeof next === "string") {

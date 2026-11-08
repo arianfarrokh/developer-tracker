@@ -7,6 +7,7 @@ export type TrackerCardWorkItem = {
   count?: number;
   status?: string;
   completedAt?: string | null;
+  statusChangePending?: boolean;
 };
 
 export type TrackerCardData = {
