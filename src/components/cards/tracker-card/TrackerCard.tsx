@@ -239,6 +239,7 @@ export function TrackerCard({
                                   rowId,
                                   status,
                                   data.id,
+                                  index,
                                 )
                             : undefined
                         }

@@ -5,15 +5,21 @@ export const changeWorkItemStatusMutation: TypedDocumentNode<
   ChangeWorkItemStatusMutationData,
   InputVariable<UpdateWorkItemStatusInput>
 > = gql`
-  mutation changeWorkItemStatus($input: UpdateWorkItemStatusInput!) {
+  mutation updateWorkItemStatus($input: UpdateWorkItemStatusInput!) {
     updateWorkItemStatus(input: $input) {
-      workItemDto {
+      result {
         id
         task
-        goalId
+        count
         dueDate
         completedAt
         workItemStatus
+        goalId
+      }
+      errors {
+        ... on AppError {
+          message
+        }
       }
     }
   }

@@ -27,6 +27,7 @@ type UpdateWorkItemStatusInput = {
 
 type ChangeWorkItemStatusMutationData = {
   updateWorkItemStatus: {
-    workItemDto: GoalWorkItemQueryResultType | null;
+    result: GoalWorkItemQueryResultType | null;
+    errors: { message: string }[] | null;
   } | null;
 };

@@ -30,6 +30,7 @@ export type TrackerCardActions = {
     workItemId: string,
     status: string,
     parentId: string,
+    workItemIndex: number,
   ) => void;
 };
 
