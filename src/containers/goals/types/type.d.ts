@@ -20,6 +20,18 @@ type AllGoalsQueryResultType = {
 
 type WorkItemStatusEnum = "TODO" | "IN_PROGRESS" | "COMPLETED" | "CANCELLED";
 
+type CreateGoalInput = {
+  title: string;
+  description: string;
+  priority: number;
+};
+
+type CreateGoalMutationData = {
+  createGoal: {
+    result: AllGoalsQueryResultType | null;
+  } | null;
+};
+
 type UpdateWorkItemStatusInput = {
   id: ID;
   newStatus: WorkItemStatusEnum;

@@ -15,6 +15,7 @@ import {
 } from "./graphql/query";
 import { mapGoalToTrackerCard } from "./mapGoalToTrackerCard";
 import { mergeWorkItemIdsFromCatalog } from "./mergeWorkItemIdsFromCatalog";
+import { AddGoalDialog } from "./ui/AddGoalDialog";
 import { GoalHeader } from "./ui/GoalHeader";
 import { GOAL_WORK_ITEM_STATUS_OPTIONS } from "./workItemStatusOptions";
 import {
@@ -28,6 +29,7 @@ const SKELETON_COUNT = 6;
 
 export function GoalPageView() {
   const { error: showError } = useAlert();
+  const [isCreateGoalOpen, setIsCreateGoalOpen] = useState(false);
   const {
     data: goalsData,
     loading: goalsLoading,
@@ -212,9 +214,7 @@ export function GoalPageView() {
     <div className="space-y-8 px-4 sm:px-6 lg:px-10">
       <GoalHeader
         goalsCount={goals.length}
-        onAddGoal={() => {
-          /* hook up create-goal dialog */
-        }}
+        onAddGoal={() => setIsCreateGoalOpen(true)}
       />
 
       {goals.length === 0 ? (
@@ -259,6 +259,12 @@ export function GoalPageView() {
           ))}
         </div>
       )}
+
+      <AddGoalDialog
+        open={isCreateGoalOpen}
+        onOpenChange={setIsCreateGoalOpen}
+        onCreated={() => Promise.all([refetchGoals(), refetchWorkItems()])}
+      />
     </div>
   );
 }
