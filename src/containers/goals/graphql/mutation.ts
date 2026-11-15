@@ -69,3 +69,34 @@ export const deleteGoalMutation: TypedDocumentNode<
     }
   }
 `;
+
+export const editGoalMutation: TypedDocumentNode<
+  CreateGoalMutationData,
+  InputVariable<UpdateGoalInput>
+> = gql`
+  mutation updateGoalMutation($input: UpdateGoalInput!) {
+    updateGoal(input: $input) {
+      result {
+        id
+        title
+        description
+        priority
+        progress
+        goalStatus
+        workItems {
+          id
+          task
+          count
+          dueDate
+          workItemStatus
+          completedAt
+        }
+      }
+      errors {
+        ... on AppError {
+          message
+        }
+      }
+    }
+  }
+`;

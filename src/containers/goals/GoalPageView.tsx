@@ -8,10 +8,7 @@ import {
 import { useAlert } from "@/providers/alert-provider";
 import { useMutation, useQuery } from "@apollo/client/react";
 import { useCallback, useMemo, useState } from "react";
-import {
-  changeWorkItemStatusMutation,
-  deleteGoalMutation,
-} from "./graphql/mutation";
+import { changeWorkItemStatusMutation } from "./graphql/mutation";
 import { AllGoalsQueryResult, AllWorkItemsQueryResult } from "./graphql/query";
 import { mapGoalToTrackerCard } from "./mapGoalToTrackerCard";
 import { mergeWorkItemIdsFromCatalog } from "./mergeWorkItemIdsFromCatalog";
@@ -25,6 +22,7 @@ import {
 } from "./workItemStatusApi";
 import { workItemStatusStateKey } from "./workItemStatusState";
 import { DeleteGoalDialog } from "./ui/DeleteGoalDialog";
+import EditGoalDialog from "./ui/EditGoalDialog";
 
 const SKELETON_COUNT = 6;
 
@@ -178,10 +176,7 @@ export function GoalPageView() {
   );
 
   const [selectedGoalId, setSelectedGoalId] = useState<string | null>(null);
-
-  const handleEditGoal = useCallback((id: string) => {
-    console.log("edit goal", id);
-  }, []);
+  const [editingGoalId, setEditingGoalId] = useState<string | null>(null);
 
   const goalCards = useMemo(() => {
     return goals.map((goal): TrackerCardData => {
@@ -204,6 +199,11 @@ export function GoalPageView() {
       };
     });
   }, [goals, pendingWorkItemKeys, workItemStatusById]);
+
+  const editingGoal = useMemo(
+  () => goals.find((goal) => goal.id === editingGoalId),
+  [goals, editingGoalId],
+);
 
   if (loading) {
     return (
@@ -264,7 +264,7 @@ export function GoalPageView() {
                     workItemIndex,
                   );
                 },
-                onEdit: (id) => handleEditGoal(id),
+                onEdit: (id) => setEditingGoalId(id),
                 onDelete: (id) => setSelectedGoalId(id),
               }}
               labels={{
@@ -293,6 +293,19 @@ export function GoalPageView() {
           if (!open) setSelectedGoalId(null);
         }}
         onDeleted={handleDeleted}
+      />
+
+      <EditGoalDialog
+        open={editingGoalId !== null}
+        goalId={editingGoalId}
+        onOpenChange={(open) => {
+          if (!open) setEditingGoalId(null);
+        }}
+        initialValues={{
+          title: editingGoal?.title ?? "",
+          description: editingGoal?.description ?? "",
+          priority: editingGoal?.priority ?? 2,
+        }}
       />
     </div>
   );

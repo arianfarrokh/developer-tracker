@@ -26,6 +26,13 @@ type CreateGoalInput = {
   priority: number;
 };
 
+type UpdateGoalInput = {
+  id: ID;
+  title: string;
+  description: string;
+  priority: number;
+};
+
 type CreateGoalMutationData = {
   createGoal: {
     result: AllGoalsQueryResultType | null;
