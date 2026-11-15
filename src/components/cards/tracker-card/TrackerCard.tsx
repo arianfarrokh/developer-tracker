@@ -69,9 +69,7 @@ export function TrackerCard({
 
       <CardContent className="relative space-y-4 p-4 sm:p-5">
         <div className="flex items-start justify-between gap-3">
-          <span className="font-mono text-[11px] text-muted-foreground">
-            {shortenDisplayId(data.id)}
-          </span>
+          <span className="font-mono text-[11px] text-muted-foreground"/>
 
           {showActions ? (
             <div className="flex items-center gap-0.5">
