@@ -16,6 +16,7 @@ export function mapGoalToTrackerCard(
       task: item.task,
       count: item.count,
       status: normalizeWorkItemStatus(item.workItemStatus),
+      dueDate: item.dueDate,
       completedAt: item.completedAt,
     })),
   };

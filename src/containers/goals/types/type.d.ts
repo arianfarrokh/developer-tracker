@@ -26,6 +26,58 @@ type CreateGoalInput = {
   priority: number;
 };
 
+type CreateWorkItemDtoInput = {
+  task: string;
+  count: number;
+  dueDate: string | null;
+  workItemStatus: WorkItemStatusEnum;
+};
+
+type CreateWorkItemsInput = {
+  goalId: ID;
+  workItems: CreateWorkItemDtoInput[];
+};
+
+type CreateWorkItemsMutationData = {
+  createWorkItems: {
+    result: GoalWorkItemQueryResultType[] | null;
+    errors: { message: string }[] | null;
+  } | null;
+};
+
+type UpdateWorkItemDtoInput = {
+  id: ID;
+  task: string;
+  goalId: ID;
+  count: number;
+  dueDate: string | null;
+  workItemStatus: WorkItemStatusEnum;
+};
+
+type UpdateWorkItemsInput = {
+  goalId: ID;
+  workItems: UpdateWorkItemDtoInput[];
+};
+
+type UpdateWorkItemsMutationData = {
+  updateWorkItems: {
+    result: GoalWorkItemQueryResultType[] | null;
+    errors: { message: string }[] | null;
+  } | null;
+};
+
+type DeleteWorkItemsInput = {
+  goalId: ID;
+  workItemIds: ID[];
+};
+
+type DeleteWorkItemsMutationData = {
+  deleteWorkItems: {
+    result: boolean | null;
+    errors: { message: string }[] | null;
+  } | null;
+};
+
 type UpdateGoalInput = {
   id: ID;
   title: string;

@@ -3,12 +3,18 @@
 import {
   TrackerCard,
   TrackerCardSkeleton,
+  type SaveTrackerWorkItemsInput,
   type TrackerCardData,
+  type TrackerCardWorkItem,
 } from "@/components/cards/tracker-card";
 import { useAlert } from "@/providers/alert-provider";
 import { useMutation, useQuery } from "@apollo/client/react";
 import { useCallback, useMemo, useState } from "react";
-import { changeWorkItemStatusMutation } from "./graphql/mutation";
+import {
+  createWorkItemsMutation,
+  deleteWorkItemsMutation,
+  updateWorkItemsMutation,
+} from "./graphql/mutation";
 import { AllGoalsQueryResult, AllWorkItemsQueryResult } from "./graphql/query";
 import { mapGoalToTrackerCard } from "./mapGoalToTrackerCard";
 import { mergeWorkItemIdsFromCatalog } from "./mergeWorkItemIdsFromCatalog";
@@ -18,9 +24,9 @@ import { GOAL_WORK_ITEM_STATUS_OPTIONS } from "./workItemStatusOptions";
 import {
   isUsableWorkItemId,
   isWorkItemStatusEnum,
+  normalizeWorkItemStatus,
   workItemRowId,
 } from "./workItemStatusApi";
-import { workItemStatusStateKey } from "./workItemStatusState";
 import { DeleteGoalDialog } from "./ui/DeleteGoalDialog";
 import EditGoalDialog from "./ui/EditGoalDialog";
 
@@ -39,7 +45,8 @@ export function GoalPageView() {
     loading: workItemsLoading,
     refetch: refetchWorkItems,
   } = useQuery(AllWorkItemsQueryResult, { fetchPolicy: "no-cache" });
-  const loading = goalsLoading || workItemsLoading;
+  const loading =
+    (goalsLoading && !goalsData) || (workItemsLoading && !workItemsData);
   const goals = useMemo(
     () =>
       mergeWorkItemIdsFromCatalog(
@@ -48,130 +55,162 @@ export function GoalPageView() {
       ),
     [goalsData?.result, workItemsData?.allWorkItems],
   );
-  const [workItemStatusById, setWorkItemStatusById] = useState<
-    Record<string, string>
-  >({});
-  const [pendingWorkItemKeys, setPendingWorkItemKeys] = useState<Set<string>>(
-    () => new Set(),
-  );
+  const [createWorkItems] = useMutation(createWorkItemsMutation);
+  const [updateWorkItems] = useMutation(updateWorkItemsMutation);
+  const [deleteWorkItems] = useMutation(deleteWorkItemsMutation);
 
-  const [changeWorkItemStatus] = useMutation(changeWorkItemStatusMutation);
-
-  const findWorkItemStatus = useCallback(
-    (goalId: string, workItemIndex: number): string | undefined => {
-      return goals.find((item) => item.id === goalId)?.workItems[workItemIndex]
-        ?.workItemStatus;
-    },
-    [goals],
-  );
-
-  const resolveMutationWorkItemId = useCallback(
-    (
-      goalId: string,
-      workItemIndex: number,
-      workItemId: string,
-    ): string | null => {
-      const fromQuery = goals.find((g) => g.id === goalId)?.workItems[
-        workItemIndex
-      ]?.id;
-      if (isUsableWorkItemId(fromQuery)) return fromQuery;
-      if (isUsableWorkItemId(workItemId)) return workItemId;
-      return null;
-    },
-    [goals],
-  );
-
-  const handleWorkItemStatusChange = useCallback(
-    async (
-      workItemId: string,
-      status: WorkItemStatusEnum,
-      goalId: string,
-      workItemIndex: number,
-    ) => {
-      const mutationId = resolveMutationWorkItemId(
-        goalId,
-        workItemIndex,
-        workItemId,
+  const handleSaveWorkItems = useCallback(
+    async ({
+      trackerId,
+      created,
+      updated,
+      deletedWorkItemIds,
+    }: SaveTrackerWorkItemsInput): Promise<
+      boolean | TrackerCardWorkItem[]
+    > => {
+      const hasInvalidStatus = [...created, ...updated].some(
+        (item) => !isWorkItemStatusEnum(item.workItemStatus),
       );
-      if (!mutationId) {
-        showError("خطا", ["شناسه آیتم کاری معتبر نیست."]);
-        return;
+      const hasInvalidId =
+        updated.some((item) => !isUsableWorkItemId(item.workItemId)) ||
+        deletedWorkItemIds.some((id) => !isUsableWorkItemId(id));
+
+      if (hasInvalidStatus || hasInvalidId) {
+        showError("خطا", ["اطلاعات آیتم‌های کاری معتبر نیست."]);
+        return false;
       }
-
-      if (!isWorkItemStatusEnum(status)) {
-        showError("خطا", ["وضعیت انتخاب‌شده معتبر نیست."]);
-        return;
-      }
-
-      const stateKey = workItemStatusStateKey(goalId, workItemIndex);
-      const previousStatus = findWorkItemStatus(goalId, workItemIndex);
-
-      setWorkItemStatusById((prev) => ({ ...prev, [stateKey]: status }));
-      setPendingWorkItemKeys((prev) => new Set(prev).add(stateKey));
 
       try {
-        const { data: mutationData } = await changeWorkItemStatus({
-          variables: {
-            input: {
-              id: mutationId,
-              newStatus: status,
-            },
-          },
-        });
+        let createdResults: GoalWorkItemQueryResultType[] = [];
+        let updatedResults: GoalWorkItemQueryResultType[] = [];
 
-        const payload = mutationData?.updateWorkItemStatus;
-        const errors = payload?.errors;
-        if (errors && errors.length > 0) {
-          throw new Error(errors[0]?.message ?? "Update failed");
+        if (created.length > 0) {
+          const { data } = await createWorkItems({
+            variables: {
+              input: {
+                goalId: trackerId,
+                workItems: created.map((item) => ({
+                  task: item.task,
+                  count: item.count,
+                  dueDate: item.dueDate?.toISOString() ?? null,
+                  workItemStatus: item.workItemStatus as WorkItemStatusEnum,
+                })),
+              },
+            },
+          });
+          const payload = data?.createWorkItems;
+          if (
+            payload?.errors?.length ||
+            payload?.result?.length !== created.length
+          ) {
+            throw new Error(payload?.errors?.[0]?.message ?? "Create failed");
+          }
+          createdResults = payload.result;
         }
 
-        const updated = payload?.result;
-        if (!updated?.id) {
-          throw new Error("Update failed");
+        if (updated.length > 0) {
+          const { data } = await updateWorkItems({
+            variables: {
+              input: {
+                goalId: trackerId,
+                workItems: updated.map((item) => ({
+                  id: item.workItemId,
+                  task: item.task,
+                  goalId: trackerId,
+                  count: item.count,
+                  dueDate: item.dueDate?.toISOString() ?? null,
+                  workItemStatus: item.workItemStatus as WorkItemStatusEnum,
+                })),
+              },
+            },
+          });
+          const payload = data?.updateWorkItems;
+          const updatedIds = new Set(payload?.result?.map((item) => item.id));
+          if (
+            payload?.errors?.length ||
+            updated.some((item) => !updatedIds.has(item.workItemId))
+          ) {
+            throw new Error(payload?.errors?.[0]?.message ?? "Update failed");
+          }
+          updatedResults = payload?.result ?? [];
+        }
+
+        if (deletedWorkItemIds.length > 0) {
+          const { data } = await deleteWorkItems({
+            variables: {
+              input: {
+                goalId: trackerId,
+                workItemIds: deletedWorkItemIds,
+              },
+            },
+          });
+          const payload = data?.deleteWorkItems;
+          if (payload?.errors?.length || payload?.result !== true) {
+            throw new Error(payload?.errors?.[0]?.message ?? "Delete failed");
+          }
         }
 
         const [, workItemsResult] = await Promise.all([
           refetchGoals(),
           refetchWorkItems(),
         ]);
-        const catalogHasUpdatedStatus =
-          workItemsResult.data?.allWorkItems.some(
-            (item) => item.id === mutationId && item.workItemStatus === status,
-          ) ?? false;
-
-        if (catalogHasUpdatedStatus) {
-          setWorkItemStatusById((prev) => {
-            const next = { ...prev };
-            delete next[stateKey];
-            return next;
-          });
+        if (!workItemsResult.data) {
+          throw new Error("Work item refresh returned no data");
         }
+        const deletedIds = new Set(deletedWorkItemIds);
+        const mutationResults = [...createdResults, ...updatedResults];
+        const mutationResultById = new Map(
+          mutationResults.map((item) => [item.id, item]),
+        );
+        const refreshedItems = workItemsResult.data.allWorkItems
+          .filter(
+            (item) =>
+              item.goalId === trackerId && !deletedIds.has(item.id),
+          )
+          .map((item) => mutationResultById.get(item.id) ?? item);
+        const refreshedIds = new Set(refreshedItems.map((item) => item.id));
+        const authoritativeItems = [
+          ...refreshedItems,
+          ...mutationResults.filter(
+            (item) =>
+              item.goalId === trackerId &&
+              !deletedIds.has(item.id) &&
+              !refreshedIds.has(item.id),
+          ),
+        ];
+        const savedItems = authoritativeItems
+          .map(
+            (item): TrackerCardWorkItem => ({
+              id: item.id,
+              task: item.task,
+              count: item.count,
+              dueDate: item.dueDate,
+              completedAt: item.completedAt,
+              status: normalizeWorkItemStatus(item.workItemStatus),
+            }),
+          );
+        show({
+          title: "موفق",
+          description: ["تمام تغییرات آیتم‌های کاری ذخیره شد."],
+          duration: 2000,
+          variant: "success",
+        });
+        return savedItems;
       } catch {
-        setWorkItemStatusById((prev) => {
-          const next = { ...prev };
-          if (previousStatus !== undefined) {
-            next[stateKey] = previousStatus;
-          } else {
-            delete next[stateKey];
-          }
-          return next;
-        });
-        showError("خطا", ["به‌روزرسانی وضعیت آیتم کاری ناموفق بود."]);
-      } finally {
-        setPendingWorkItemKeys((prev) => {
-          const next = new Set(prev);
-          next.delete(stateKey);
-          return next;
-        });
+        showError("خطا", [
+          "ذخیره تغییرات آیتم‌های کاری ناموفق بود. دوباره تلاش کنید.",
+        ]);
+        return false;
       }
     },
     [
-      changeWorkItemStatus,
-      findWorkItemStatus,
+      createWorkItems,
+      deleteWorkItems,
       refetchGoals,
       refetchWorkItems,
-      resolveMutationWorkItemId,
+      show,
       showError,
+      updateWorkItems,
     ],
   );
 
@@ -188,17 +227,14 @@ export function GoalPageView() {
           const rowId = source
             ? workItemRowId(goal.id, source, index)
             : item.id || `${goal.id}-work-item-${index}`;
-          const stateKey = workItemStatusStateKey(goal.id, index);
           return {
             ...item,
             id: rowId,
-            status: workItemStatusById[stateKey] ?? item.status,
-            statusChangePending: pendingWorkItemKeys.has(stateKey),
           };
         }),
       };
     });
-  }, [goals, pendingWorkItemKeys, workItemStatusById]);
+  }, [goals]);
 
   const editingGoal = useMemo(
   () => goals.find((goal) => goal.id === editingGoalId),
@@ -251,19 +287,7 @@ export function GoalPageView() {
               data={card}
               workItemStatusOptions={GOAL_WORK_ITEM_STATUS_OPTIONS}
               actions={{
-                onWorkItemStatusChange: (
-                  workItemId,
-                  status,
-                  goalId,
-                  workItemIndex,
-                ) => {
-                  void handleWorkItemStatusChange(
-                    workItemId,
-                    status as WorkItemStatusEnum,
-                    goalId,
-                    workItemIndex,
-                  );
-                },
+                onSaveWorkItems: handleSaveWorkItems,
                 onEdit: (id) => setEditingGoalId(id),
                 onDelete: (id) => setSelectedGoalId(id),
               }}
@@ -271,6 +295,20 @@ export function GoalPageView() {
                 workItemsTitle: "آیتم‌های کاری",
                 noWorkItems: "آیتمی ثبت نشده",
                 addWorkItem: "افزودن آیتم",
+                placeholder: "عنوان آیتم کاری...",
+                creatingWorkItem: "در حال ایجاد آیتم",
+                saveWorkItem: "ذخیره تغییرات",
+                updatingWorkItem: "در حال ویرایش آیتم",
+                deleteWorkItem: "حذف آیتم",
+                deletingWorkItem: "در حال حذف آیتم",
+                deleteWorkItemTitle: "حذف آیتم کاری",
+                deleteWorkItemDescription:
+                  "آیا از حذف این آیتم کاری اطمینان دارید؟",
+                cancel: "انصراف",
+                done: "انجام شد",
+                savingChanges: "در حال ذخیره...",
+                discardChanges: "لغو تغییرات",
+                unsavedChanges: "تغییرات ذخیره‌نشده",
                 duplicate: "کپی",
                 edit: "ویرایش",
                 delete: "حذف",

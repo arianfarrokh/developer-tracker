@@ -1,25 +1,40 @@
 "use client";
 
 import type { CSSProperties } from "react";
+import * as React from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { CustomProgress } from "@/components/progress/CustomProgress";
+import { DatePicker } from "@/components/DatePicker/DatePicker";
 import { cn } from "@/lib/utils";
 import {
+  Check,
   CheckCircle2,
   Circle,
+  LoaderCircle,
   Pencil,
   Plus,
   Trash2,
+  X,
 } from "lucide-react";
 import {
   DEFAULT_WORK_ITEM_STATUS_OPTIONS,
   priorityBadge,
-  shortenDisplayId,
   trackerStatusBadgeClass,
   formatTrackerStatus,
 } from "./status";
-import type { TrackerCardProps } from "./types";
+import type { TrackerCardProps, TrackerCardWorkItem } from "./types";
 import { WorkItemStatusSelect } from "./WorkItemStatusSelect";
 
 const DEFAULT_LABELS = {
@@ -29,6 +44,19 @@ const DEFAULT_LABELS = {
   edit: "Edit",
   delete: "Delete",
   toggleWorkItem: "Toggle complete",
+  placeholder: "Add new work item...",
+  creatingWorkItem: "Creating work item",
+  saveWorkItem: "Save changes",
+  updatingWorkItem: "Updating work item",
+  deleteWorkItem: "Delete work item",
+  deletingWorkItem: "Deleting work item",
+  deleteWorkItemTitle: "Delete work item",
+  deleteWorkItemDescription: "Are you sure you want to delete this work item?",
+  cancel: "Cancel",
+  done: "Done",
+  savingChanges: "Saving changes",
+  discardChanges: "Discard changes",
+  unsavedChanges: "Unsaved changes",
 } as const;
 
 function clampProgress(value: number | undefined): number {
@@ -46,13 +74,255 @@ export function TrackerCard({
 }: TrackerCardProps) {
   const labels = { ...DEFAULT_LABELS, ...labelOverrides };
   const progress = clampProgress(data.progress);
-  const workItems = data.workItems ?? [];
+  const serverWorkItems = data.workItems ?? [];
   const priority = priorityBadge(data.priority);
-  const canChangeWorkItemStatus = Boolean(actions?.onWorkItemStatusChange);
 
   const showEdit = Boolean(actions?.onEdit);
   const showDelete = Boolean(actions?.onDelete);
   const showActions = showEdit || showDelete;
+
+  const [isEditingWorkItems, setIsEditingWorkItems] = React.useState(false);
+  const [committedWorkItems, setCommittedWorkItems] =
+    React.useState<TrackerCardWorkItem[]>(serverWorkItems);
+  const [newItemTitle, setNewItemTitle] = React.useState("");
+  const [newItemDate, setNewItemDate] = React.useState<Date | undefined>(undefined);
+  const [draftWorkItems, setDraftWorkItems] =
+    React.useState<TrackerCardWorkItem[]>(serverWorkItems);
+  const [createdWorkItemIds, setCreatedWorkItemIds] = React.useState<Set<string>>(
+    () => new Set(),
+  );
+  const [updatedWorkItemIds, setUpdatedWorkItemIds] = React.useState<Set<string>>(
+    () => new Set(),
+  );
+  const [deletedWorkItemIds, setDeletedWorkItemIds] = React.useState<Set<string>>(
+    () => new Set(),
+  );
+  const [isSavingChanges, setIsSavingChanges] = React.useState(false);
+  const [editingWorkItemId, setEditingWorkItemId] = React.useState<string | null>(
+    null,
+  );
+  const [editItemTitle, setEditItemTitle] = React.useState("");
+  const [editItemDate, setEditItemDate] = React.useState<Date | undefined>();
+  const [deleteCandidate, setDeleteCandidate] = React.useState<{
+    id: string;
+    task: string;
+  } | null>(null);
+
+  const hasDraftChanges =
+    createdWorkItemIds.size > 0 ||
+    updatedWorkItemIds.size > 0 ||
+    deletedWorkItemIds.size > 0;
+  const hasPendingChanges = hasDraftChanges || editingWorkItemId !== null;
+  const workItems = isEditingWorkItems
+    ? hasDraftChanges
+      ? draftWorkItems
+      : committedWorkItems
+    : committedWorkItems;
+  const canChangeWorkItemStatus = Boolean(
+    isEditingWorkItems &&
+      (actions?.onSaveWorkItems || actions?.onWorkItemStatusChange),
+  );
+
+  const enterWorkItemEditMode = () => {
+    setDraftWorkItems(committedWorkItems);
+    setIsEditingWorkItems(true);
+  };
+
+  const beginDraft = () => {
+    if (!hasDraftChanges) setDraftWorkItems(committedWorkItems);
+  };
+
+  const handleCreateItem = () => {
+    const task = newItemTitle.trim();
+    if (!task || !actions?.onSaveWorkItems) return;
+
+    const draftId = `draft-${crypto.randomUUID()}`;
+    const item: TrackerCardWorkItem = {
+      id: draftId,
+      task,
+      count: 1,
+      dueDate: newItemDate?.toISOString() ?? null,
+      status: "TODO",
+      completedAt: null,
+    };
+    setDraftWorkItems((current) => [
+      ...(hasDraftChanges ? current : committedWorkItems),
+      item,
+    ]);
+    setCreatedWorkItemIds((current) => new Set(current).add(draftId));
+    setNewItemTitle("");
+    setNewItemDate(undefined);
+  };
+
+  const markItemUpdated = (workItemId: string) => {
+    if (createdWorkItemIds.has(workItemId)) return;
+    setUpdatedWorkItemIds((current) => new Set(current).add(workItemId));
+  };
+
+  const handleUpdateItem = (item: TrackerCardWorkItem) => {
+    const task = editItemTitle.trim();
+    if (!task || !editingWorkItemId || !actions?.onSaveWorkItems) return;
+
+    beginDraft();
+    setDraftWorkItems((current) =>
+      (hasDraftChanges ? current : committedWorkItems).map((draftItem) =>
+        draftItem.id === editingWorkItemId
+          ? {
+              ...draftItem,
+              task,
+              dueDate: editItemDate?.toISOString() ?? null,
+            }
+          : draftItem,
+      ),
+    );
+    markItemUpdated(item.id);
+    setEditingWorkItemId(null);
+  };
+
+  const handleDraftStatusChange = (
+    workItemId: string,
+    status: string,
+    index: number,
+  ) => {
+    if (!actions?.onSaveWorkItems) {
+      actions?.onWorkItemStatusChange?.(workItemId, status, data.id, index);
+      return;
+    }
+
+    beginDraft();
+    setDraftWorkItems((current) =>
+      (hasDraftChanges ? current : committedWorkItems).map((item) =>
+        item.id === workItemId ? { ...item, status } : item,
+      ),
+    );
+    markItemUpdated(workItemId);
+  };
+
+  const handleDeleteItem = () => {
+    if (!deleteCandidate || !actions?.onSaveWorkItems) return;
+
+    beginDraft();
+    setDraftWorkItems((current) =>
+      (hasDraftChanges ? current : committedWorkItems).filter(
+        (item) => item.id !== deleteCandidate.id,
+      ),
+    );
+    if (createdWorkItemIds.has(deleteCandidate.id)) {
+      setCreatedWorkItemIds((current) => {
+        const next = new Set(current);
+        next.delete(deleteCandidate.id);
+        return next;
+      });
+    } else {
+      setDeletedWorkItemIds((current) =>
+        new Set(current).add(deleteCandidate.id),
+      );
+      setUpdatedWorkItemIds((current) => {
+        const next = new Set(current);
+        next.delete(deleteCandidate.id);
+        return next;
+      });
+    }
+    setDeleteCandidate(null);
+    if (editingWorkItemId === deleteCandidate.id) {
+      setEditingWorkItemId(null);
+    }
+  };
+
+  const toDate = (value: string | null | undefined) => {
+    if (!value) return undefined;
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? undefined : date;
+  };
+
+  const handleSaveChanges = async () => {
+    if (isSavingChanges || !actions?.onSaveWorkItems) {
+      return;
+    }
+    if (!hasPendingChanges) {
+      setIsEditingWorkItems(false);
+      return;
+    }
+    if (editingWorkItemId && !editItemTitle.trim()) return;
+
+    const itemsToSave = editingWorkItemId
+      ? (hasDraftChanges ? draftWorkItems : committedWorkItems).map((item) =>
+          item.id === editingWorkItemId
+            ? {
+                ...item,
+                task: editItemTitle.trim(),
+                dueDate: editItemDate?.toISOString() ?? null,
+              }
+            : item,
+        )
+      : draftWorkItems;
+    const updatedIdsToSave = new Set(updatedWorkItemIds);
+    if (
+      editingWorkItemId &&
+      !createdWorkItemIds.has(editingWorkItemId)
+    ) {
+      updatedIdsToSave.add(editingWorkItemId);
+    }
+
+    setIsSavingChanges(true);
+    try {
+      const saved = await actions.onSaveWorkItems({
+        trackerId: data.id,
+        created: itemsToSave
+          .filter((item) => createdWorkItemIds.has(item.id))
+          .map((item) => ({
+            task: item.task,
+            count: item.count ?? 1,
+            dueDate: toDate(item.dueDate),
+            workItemStatus: item.status ?? "TODO",
+          })),
+        updated: itemsToSave
+          .filter((item) => updatedIdsToSave.has(item.id))
+          .map((item) => ({
+            workItemId: item.id,
+            task: item.task,
+            count: item.count ?? 1,
+            dueDate: toDate(item.dueDate),
+            workItemStatus: item.status ?? "TODO",
+          })),
+        deletedWorkItemIds: [...deletedWorkItemIds],
+      });
+      if (saved === false) return;
+
+      if (Array.isArray(saved)) {
+        setCommittedWorkItems(saved);
+      }
+      setCreatedWorkItemIds(new Set());
+      setUpdatedWorkItemIds(new Set());
+      setDeletedWorkItemIds(new Set());
+      setEditingWorkItemId(null);
+      setIsEditingWorkItems(false);
+    } finally {
+      setIsSavingChanges(false);
+    }
+  };
+
+  const handleDiscardChanges = () => {
+    setDraftWorkItems(committedWorkItems);
+    setCreatedWorkItemIds(new Set());
+    setUpdatedWorkItemIds(new Set());
+    setDeletedWorkItemIds(new Set());
+    setEditingWorkItemId(null);
+    setDeleteCandidate(null);
+    setIsEditingWorkItems(false);
+  };
+
+  const startEditingItem = (
+    item: TrackerCardWorkItem,
+    workItemId: string,
+  ) => {
+    const dueDate = item.dueDate ? new Date(item.dueDate) : undefined;
+    setEditingWorkItemId(workItemId);
+    setEditItemTitle(item.task);
+    setEditItemDate(
+      dueDate && !Number.isNaN(dueDate.getTime()) ? dueDate : undefined,
+    );
+  };
 
   return (
     <Card
@@ -69,7 +339,7 @@ export function TrackerCard({
 
       <CardContent className="relative space-y-4 p-4 sm:p-5">
         <div className="flex items-start justify-between gap-3">
-          <span className="font-mono text-[11px] text-muted-foreground"/>
+          <span className="font-mono text-[11px] text-muted-foreground" />
 
           {showActions ? (
             <div className="flex items-center gap-0.5">
@@ -156,20 +426,73 @@ export function TrackerCard({
             <p className="text-sm font-medium text-foreground">
               {labels.workItemsTitle}
             </p>
-            {actions?.onAddWorkItem ? (
+            {actions?.onSaveWorkItems ? (
               <Button
                 type="button"
-                variant="outline"
-                size="icon-xs"
-                className="rounded-full border-border/70"
-                aria-label={labels.addWorkItem}
-                title={labels.addWorkItem}
-                onClick={() => actions.onAddWorkItem?.(data.id)}
+                variant={isEditingWorkItems ? "default" : "outline"}
+                size="sm"
+                disabled={
+                  isSavingChanges ||
+                  Boolean(editingWorkItemId && !editItemTitle.trim())
+                }
+                onClick={
+                  isEditingWorkItems
+                    ? () => void handleSaveChanges()
+                    : enterWorkItemEditMode
+                }
               >
-                <Plus className="size-3.5" />
+                {isSavingChanges ? (
+                  <LoaderCircle className="size-3.5 animate-spin" />
+                ) : isEditingWorkItems ? (
+                  <Check className="size-3.5" />
+                ) : (
+                  <Pencil className="size-3.5" />
+                )}
+                {isSavingChanges
+                  ? labels.savingChanges
+                  : isEditingWorkItems
+                    ? labels.done
+                    : labels.edit}
               </Button>
             ) : null}
           </div>
+
+          {isEditingWorkItems && (
+            <div
+              className="flex items-center gap-1.5 rounded-xl border border-primary/70 bg-background/85 p-2 shadow-[0_0_16px_color-mix(in_oklch,var(--primary)_25%,transparent)] ring-1 ring-primary/20"
+              dir="rtl"
+            >
+              <Input
+                autoFocus
+                placeholder={labels.placeholder}
+                value={newItemTitle}
+                onChange={(e) => setNewItemTitle(e.target.value)}
+                disabled={isSavingChanges}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    handleCreateItem();
+                  }
+                }}
+                className="h-8 min-w-0 flex-1 border-0 bg-transparent px-2 text-sm shadow-none focus-visible:ring-0"
+              />
+              <DatePicker
+                date={newItemDate}
+                onSelect={setNewItemDate}
+              />
+              <Button
+                type="button"
+                size="icon-xs"
+                className="size-8 rounded-lg shadow-sm"
+                onClick={handleCreateItem}
+                disabled={!newItemTitle.trim() || isSavingChanges}
+                aria-label={labels.addWorkItem}
+                title={labels.addWorkItem}
+              >
+                <Plus className="size-4" />
+              </Button>
+            </div>
+          )}
 
           <div
             className={cn(
@@ -177,11 +500,14 @@ export function TrackerCard({
               workItems.length > 0 && "divide-y divide-border/50",
             )}
           >
-            {workItems.length === 0 ? (
-              <p className="px-3 py-6 text-center text-sm text-muted-foreground">
-                {labels.noWorkItems}
+            {workItems.length === 0 && !isEditingWorkItems ? (
+              <p
+                onClick={enterWorkItemEditMode}
+                className="cursor-pointer px-3 py-6 text-center text-sm text-muted-foreground transition-colors hover:text-foreground"
+              >
+                {labels.noWorkItems} (Click to add)
               </p>
-            ) : (
+            ) : workItems.length === 0 ? null : (
               <ul
                 className={cn(
                   "max-h-[calc(var(--tracker-work-item-height,2.75rem)*var(--tracker-visible-items,5))]",
@@ -197,6 +523,63 @@ export function TrackerCard({
                   const rowId = item.id || `${data.id}-work-item-${index}`;
                   const isDone = Boolean(item.completedAt);
                   const canToggle = Boolean(actions?.onToggleWorkItemComplete);
+                  const isEditing = editingWorkItemId === rowId;
+
+                  if (isEditing) {
+                    return (
+                      <li
+                        key={rowId}
+                        className="flex items-center gap-1.5 bg-primary/[0.04] p-2"
+                        dir="rtl"
+                      >
+                        <Input
+                          autoFocus
+                          value={editItemTitle}
+                          onChange={(event) =>
+                            setEditItemTitle(event.target.value)
+                          }
+                          onKeyDown={(event) => {
+                            if (event.key === "Enter") {
+                              event.preventDefault();
+                              handleUpdateItem(item);
+                            }
+                            if (event.key === "Escape") {
+                              setEditingWorkItemId(null);
+                            }
+                          }}
+                          disabled={isSavingChanges}
+                          className="h-8 min-w-0 flex-1 text-sm"
+                        />
+                        <DatePicker
+                          date={editItemDate}
+                          onSelect={setEditItemDate}
+                        />
+                        <Button
+                          type="button"
+                          size="icon-xs"
+                          className="size-8"
+                          disabled={!editItemTitle.trim() || isSavingChanges}
+                          aria-label={labels.saveWorkItem}
+                          title={labels.saveWorkItem}
+                          onClick={() => handleUpdateItem(item)}
+                        >
+                          <Check className="size-4" />
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon-xs"
+                          className="size-8"
+                          disabled={isSavingChanges}
+                          aria-label={labels.cancel}
+                          title={labels.cancel}
+                          onClick={() => setEditingWorkItemId(null)}
+                        >
+                          <X className="size-4" />
+                        </Button>
+                      </li>
+                    );
+                  }
 
                   return (
                     <li
@@ -217,16 +600,41 @@ export function TrackerCard({
                         onChange={
                           canChangeWorkItemStatus
                             ? (status) =>
-                                actions?.onWorkItemStatusChange?.(
-                                  rowId,
-                                  status,
-                                  data.id,
-                                  index,
-                                )
+                                handleDraftStatusChange(rowId, status, index)
                             : undefined
                         }
                         readOnly={!canChangeWorkItemStatus}
                       />
+                      {actions?.onSaveWorkItems && isEditingWorkItems ? (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon-xs"
+                          className="shrink-0 text-muted-foreground hover:text-foreground"
+                          disabled={item.statusChangePending}
+                          aria-label={labels.edit}
+                          title={labels.edit}
+                          onClick={() => startEditingItem(item, rowId)}
+                        >
+                          <Pencil className="size-3.5" />
+                        </Button>
+                      ) : null}
+                      {actions?.onSaveWorkItems && isEditingWorkItems ? (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon-xs"
+                          className="shrink-0 text-muted-foreground hover:text-destructive"
+                          disabled={item.statusChangePending}
+                          aria-label={labels.deleteWorkItem}
+                          title={labels.deleteWorkItem}
+                          onClick={() =>
+                            setDeleteCandidate({ id: rowId, task: item.task })
+                          }
+                        >
+                          <Trash2 className="size-3.5" />
+                        </Button>
+                      ) : null}
                       {canToggle ? (
                         <Button
                           type="button"
@@ -266,8 +674,56 @@ export function TrackerCard({
               </ul>
             )}
           </div>
+
+          {isEditingWorkItems ? (
+            <div className="flex items-center justify-between gap-2 rounded-xl border border-primary/30 bg-primary/[0.05] p-2">
+              <span className="px-1 text-xs text-muted-foreground">
+                {hasPendingChanges
+                  ? labels.unsavedChanges
+                  : labels.addWorkItem}
+              </span>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                disabled={isSavingChanges}
+                onClick={handleDiscardChanges}
+              >
+                {labels.discardChanges}
+              </Button>
+            </div>
+          ) : null}
         </div>
       </CardContent>
+
+      <AlertDialog
+        open={deleteCandidate !== null}
+        onOpenChange={(open) => {
+          if (!open) setDeleteCandidate(null);
+        }}
+      >
+        <AlertDialogContent dir="rtl">
+          <AlertDialogHeader>
+            <AlertDialogTitle>{labels.deleteWorkItemTitle}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {labels.deleteWorkItemDescription}
+              {deleteCandidate?.task ? ` «${deleteCandidate.task}»` : ""}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>
+              {labels.cancel}
+            </AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              onClick={handleDeleteItem}
+            >
+              <Trash2 className="size-4" />
+              {labels.deleteWorkItem}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>
   );
 }

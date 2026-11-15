@@ -28,6 +28,70 @@ export const createGoalMutation: TypedDocumentNode<
   }
 `;
 
+export const createWorkItemsMutation: TypedDocumentNode<
+  CreateWorkItemsMutationData,
+  InputVariable<CreateWorkItemsInput>
+> = gql`
+  mutation createWorkItemsMutation($input: CreateWorkItemsInput!) {
+    createWorkItems(input: $input) {
+      result {
+        id
+        task
+        goalId
+        count
+        dueDate
+        completedAt
+        workItemStatus
+      }
+      errors {
+        ... on AppError {
+          message
+        }
+      }
+    }
+  }
+`;
+
+export const updateWorkItemsMutation: TypedDocumentNode<
+  UpdateWorkItemsMutationData,
+  InputVariable<UpdateWorkItemsInput>
+> = gql`
+  mutation updateWorkItemsMutation($input: UpdateWorkItemsInput!) {
+    updateWorkItems(input: $input) {
+      result {
+        id
+        task
+        goalId
+        count
+        dueDate
+        completedAt
+        workItemStatus
+      }
+      errors {
+        ... on AppError {
+          message
+        }
+      }
+    }
+  }
+`;
+
+export const deleteWorkItemsMutation: TypedDocumentNode<
+  DeleteWorkItemsMutationData,
+  InputVariable<DeleteWorkItemsInput>
+> = gql`
+  mutation deleteWorkItemsMutation($input: DeleteWorkItemsInput!) {
+    deleteWorkItems(input: $input) {
+      result
+      errors {
+        ... on AppError {
+          message
+        }
+      }
+    }
+  }
+`;
+
 export const changeWorkItemStatusMutation: TypedDocumentNode<
   ChangeWorkItemStatusMutationData,
   InputVariable<UpdateWorkItemStatusInput>
