@@ -8,11 +8,11 @@ import {
 import { useAlert } from "@/providers/alert-provider";
 import { useMutation, useQuery } from "@apollo/client/react";
 import { useCallback, useMemo, useState } from "react";
-import { changeWorkItemStatusMutation } from "./graphql/mutation";
 import {
-  AllGoalsQueryResult,
-  AllWorkItemsQueryResult,
-} from "./graphql/query";
+  changeWorkItemStatusMutation,
+  deleteGoalMutation,
+} from "./graphql/mutation";
+import { AllGoalsQueryResult, AllWorkItemsQueryResult } from "./graphql/query";
 import { mapGoalToTrackerCard } from "./mapGoalToTrackerCard";
 import { mergeWorkItemIdsFromCatalog } from "./mergeWorkItemIdsFromCatalog";
 import { AddGoalDialog } from "./ui/AddGoalDialog";
@@ -24,20 +24,18 @@ import {
   workItemRowId,
 } from "./workItemStatusApi";
 import { workItemStatusStateKey } from "./workItemStatusState";
+import { DeleteGoalDialog } from "./ui/DeleteGoalDialog";
 
 const SKELETON_COUNT = 6;
 
 export function GoalPageView() {
-  const { error: showError } = useAlert();
+  const { show, error: showError } = useAlert();
   const [isCreateGoalOpen, setIsCreateGoalOpen] = useState(false);
   const {
     data: goalsData,
     loading: goalsLoading,
     refetch: refetchGoals,
-  } = useQuery(
-    AllGoalsQueryResult,
-    { fetchPolicy: "no-cache" },
-  );
+  } = useQuery(AllGoalsQueryResult, { fetchPolicy: "no-cache" });
   const {
     data: workItemsData,
     loading: workItemsLoading,
@@ -70,9 +68,14 @@ export function GoalPageView() {
   );
 
   const resolveMutationWorkItemId = useCallback(
-    (goalId: string, workItemIndex: number, workItemId: string): string | null => {
-      const fromQuery = goals.find((g) => g.id === goalId)?.workItems[workItemIndex]
-        ?.id;
+    (
+      goalId: string,
+      workItemIndex: number,
+      workItemId: string,
+    ): string | null => {
+      const fromQuery = goals.find((g) => g.id === goalId)?.workItems[
+        workItemIndex
+      ]?.id;
       if (isUsableWorkItemId(fromQuery)) return fromQuery;
       if (isUsableWorkItemId(workItemId)) return workItemId;
       return null;
@@ -135,8 +138,7 @@ export function GoalPageView() {
         ]);
         const catalogHasUpdatedStatus =
           workItemsResult.data?.allWorkItems.some(
-            (item) =>
-              item.id === mutationId && item.workItemStatus === status,
+            (item) => item.id === mutationId && item.workItemStatus === status,
           ) ?? false;
 
         if (catalogHasUpdatedStatus) {
@@ -175,6 +177,12 @@ export function GoalPageView() {
     ],
   );
 
+  const [selectedGoalId, setSelectedGoalId] = useState<string | null>(null);
+
+  const handleEditGoal = useCallback((id: string) => {
+    console.log("edit goal", id);
+  }, []);
+
   const goalCards = useMemo(() => {
     return goals.map((goal): TrackerCardData => {
       const card = mapGoalToTrackerCard(goal);
@@ -209,6 +217,16 @@ export function GoalPageView() {
       </div>
     );
   }
+
+  const handleDeleted = () => {
+    setSelectedGoalId(null);
+    void Promise.all([refetchGoals(), refetchWorkItems()]);
+    show({
+      title: "هدف با موفقست حذف گردید",
+      duration: 2000,
+      variant: "success",
+    });
+  };
 
   return (
     <div className="space-y-8 px-4 sm:px-6 lg:px-10">
@@ -246,6 +264,8 @@ export function GoalPageView() {
                     workItemIndex,
                   );
                 },
+                onEdit: (id) => handleEditGoal(id),
+                onDelete: (id) => setSelectedGoalId(id),
               }}
               labels={{
                 workItemsTitle: "آیتم‌های کاری",
@@ -264,6 +284,15 @@ export function GoalPageView() {
         open={isCreateGoalOpen}
         onOpenChange={setIsCreateGoalOpen}
         onCreated={() => Promise.all([refetchGoals(), refetchWorkItems()])}
+      />
+
+      <DeleteGoalDialog
+        open={selectedGoalId !== null}
+        goalId={selectedGoalId}
+        onOpenChange={(open) => {
+          if (!open) setSelectedGoalId(null);
+        }}
+        onDeleted={handleDeleted}
       />
     </div>
   );

@@ -1,4 +1,4 @@
-import { InputVariable } from "@/graphql/query-types";
+import { InputVariable, ResultData } from "@/graphql/query-types";
 import { gql, TypedDocumentNode } from "@apollo/client";
 
 export const createGoalMutation: TypedDocumentNode<
@@ -42,6 +42,24 @@ export const changeWorkItemStatusMutation: TypedDocumentNode<
         completedAt
         workItemStatus
         goalId
+      }
+      errors {
+        ... on AppError {
+          message
+        }
+      }
+    }
+  }
+`;
+
+export const deleteGoalMutation: TypedDocumentNode<
+  ResultData<{ isSuccess: boolean }>,
+  InputVariable<{ id: string }>
+> = gql`
+  mutation deleteGoalMutation($input: DeleteGoalInput!) {
+    response: deleteGoal(input: $input) {
+      result {
+        isSuccess
       }
       errors {
         ... on AppError {

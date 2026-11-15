@@ -8,7 +8,6 @@ import { cn } from "@/lib/utils";
 import {
   CheckCircle2,
   Circle,
-  Copy,
   Pencil,
   Plus,
   Trash2,
@@ -27,7 +26,6 @@ const DEFAULT_LABELS = {
   workItemsTitle: "Work Items",
   noWorkItems: "No work items",
   addWorkItem: "Add work item",
-  duplicate: "Duplicate",
   edit: "Edit",
   delete: "Delete",
   toggleWorkItem: "Toggle complete",
@@ -52,10 +50,9 @@ export function TrackerCard({
   const priority = priorityBadge(data.priority);
   const canChangeWorkItemStatus = Boolean(actions?.onWorkItemStatusChange);
 
-  const showDuplicate = Boolean(actions?.onDuplicate);
   const showEdit = Boolean(actions?.onEdit);
   const showDelete = Boolean(actions?.onDelete);
-  const showActions = showDuplicate || showEdit || showDelete;
+  const showActions = showEdit || showDelete;
 
   return (
     <Card
@@ -78,19 +75,6 @@ export function TrackerCard({
 
           {showActions ? (
             <div className="flex items-center gap-0.5">
-              {showDuplicate ? (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon-xs"
-                  className="text-muted-foreground hover:text-foreground"
-                  aria-label={labels.duplicate}
-                  title={labels.duplicate}
-                  onClick={() => actions?.onDuplicate?.(data.id)}
-                >
-                  <Copy className="size-3.5" />
-                </Button>
-              ) : null}
               {showEdit ? (
                 <Button
                   type="button"
