@@ -7,6 +7,7 @@ const DEFAULT_STATUS_STYLE =
 export const TRACKER_STATUS_STYLES: Record<string, string> = {
   TODO: "border-border/80 bg-muted/60 text-muted-foreground",
   IN_PROGRESS: "border-info/40 bg-info/15 text-info",
+  ACHIEVED: "border-success/40 bg-success/15 text-success",
   DONE: "border-success/40 bg-success/15 text-success",
   COMPLETED: "border-success/40 bg-success/15 text-success",
   CANCELLED: "border-destructive/40 bg-destructive/15 text-destructive",
@@ -21,6 +22,7 @@ export const TRACKER_STATUS_STYLES: Record<string, string> = {
 export const TRACKER_STATUS_DOT: Record<string, string> = {
   TODO: "bg-muted-foreground",
   IN_PROGRESS: "bg-info",
+  ACHIEVED: "bg-success",
   DONE: "bg-success",
   COMPLETED: "bg-success",
   CANCELLED: "bg-destructive",
@@ -31,8 +33,21 @@ export const TRACKER_STATUS_DOT: Record<string, string> = {
   PLANNING: "bg-accent",
 };
 
+const TRACKER_STATUS_LABELS: Record<string, string> = {
+  TODO: "انجام نشده",
+  IN_PROGRESS: "در حال انجام",
+  ACHIEVED: "تحقق یافته",
+  COMPLETED: "انجام شده",
+  CANCELLED: "لغو شده",
+  CANCELED: "لغو شده",
+};
+
 export function formatTrackerStatus(status: string | undefined): string {
   if (!status) return "—";
+  const key = status.toUpperCase();
+  if (TRACKER_STATUS_LABELS[key]) {
+    return TRACKER_STATUS_LABELS[key];
+  }
   return status.replaceAll("_", " ");
 }
 

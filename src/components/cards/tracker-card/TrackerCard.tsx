@@ -31,8 +31,6 @@ import {
 import {
   DEFAULT_WORK_ITEM_STATUS_OPTIONS,
   priorityBadge,
-  trackerStatusBadgeClass,
-  formatTrackerStatus,
 } from "./status";
 import type { TrackerCardProps, TrackerCardWorkItem } from "./types";
 import { WorkItemStatusSelect } from "./WorkItemStatusSelect";
@@ -339,43 +337,6 @@ export function TrackerCard({
 
       <CardContent className="relative space-y-4 p-4 sm:p-5">
         <div className="flex items-start justify-between gap-3">
-          <span className="font-mono text-[11px] text-muted-foreground" />
-
-          {showActions ? (
-            <div className="flex items-center gap-0.5">
-              {showEdit ? (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon-xs"
-                  className="text-muted-foreground hover:text-foreground"
-                  aria-label={labels.edit}
-                  title={labels.edit}
-                  onClick={() => actions?.onEdit?.(data.id)}
-                >
-                  <Pencil className="size-3.5" />
-                </Button>
-              ) : null}
-              {showDelete ? (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon-xs"
-                  className="text-muted-foreground hover:text-destructive"
-                  aria-label={labels.delete}
-                  title={labels.delete}
-                  onClick={() => actions?.onDelete?.(data.id)}
-                >
-                  <Trash2 className="size-3.5" />
-                </Button>
-              ) : null}
-            </div>
-          ) : (
-            <div className="size-7" aria-hidden />
-          )}
-        </div>
-
-        <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 flex-1 space-y-2">
             <div className="flex flex-wrap items-center gap-2">
               <span
@@ -389,9 +350,41 @@ export function TrackerCard({
               </span>
             </div>
 
-            <h3 className="text-balance text-lg font-semibold leading-snug tracking-tight text-foreground sm:text-xl">
-              {data.title}
-            </h3>
+            <div className="flex items-center justify-between gap-2">
+              <h3 className="min-w-0 flex-1 text-balance text-lg font-semibold leading-snug tracking-tight text-foreground sm:text-xl">
+                {data.title}
+              </h3>
+              {showActions ? (
+                <div className="flex shrink-0 items-center gap-0.5">
+                  {showEdit ? (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon-xs"
+                      className="text-muted-foreground hover:text-foreground"
+                      aria-label={labels.edit}
+                      title={labels.edit}
+                      onClick={() => actions?.onEdit?.(data.id)}
+                    >
+                      <Pencil className="size-3.5" />
+                    </Button>
+                  ) : null}
+                  {showDelete ? (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon-xs"
+                      className="text-muted-foreground hover:text-destructive"
+                      aria-label={labels.delete}
+                      title={labels.delete}
+                      onClick={() => actions?.onDelete?.(data.id)}
+                    >
+                      <Trash2 className="size-3.5" />
+                    </Button>
+                  ) : null}
+                </div>
+              ) : null}
+            </div>
             {data.description ? (
               <p className="line-clamp-2 text-sm leading-relaxed text-muted-foreground">
                 {data.description}
@@ -399,16 +392,13 @@ export function TrackerCard({
             ) : null}
           </div>
 
-          <div className="flex shrink-0 flex-col items-end gap-2">
-            {media ? (
+          {media ? (
+            <div className="flex shrink-0 flex-col items-end gap-2">
               <div className="overflow-hidden rounded-xl border border-border/60 bg-muted/30 p-1">
                 {media}
               </div>
-            ) : null}
-            <span className={trackerStatusBadgeClass(data.status)}>
-              {formatTrackerStatus(data.status)}
-            </span>
-          </div>
+            </div>
+          ) : null}
         </div>
 
         <div className="space-y-2 rounded-xl border border-border/60 bg-muted/15 p-3">

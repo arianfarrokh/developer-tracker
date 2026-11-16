@@ -178,6 +178,22 @@ export function GoalPageView() {
               !refreshedIds.has(item.id),
           ),
         ];
+        const catalogById = new Map(
+          workItemsResult.data.allWorkItems
+            .filter((item) => item.goalId === trackerId)
+            .map((item) => [item.id, item] as const),
+        );
+        const staleAfterSave = updated.some((item) => {
+          const saved = mutationResultById.get(item.workItemId);
+          const fromCatalog = catalogById.get(item.workItemId);
+          if (!saved || !fromCatalog) {
+            return false;
+          }
+          return fromCatalog.task !== saved.task;
+        });
+        if (staleAfterSave) {
+          throw new Error("Work item catalog did not reflect save");
+        }
         const savedItems = authoritativeItems
           .map(
             (item): TrackerCardWorkItem => ({
