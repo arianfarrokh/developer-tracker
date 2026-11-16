@@ -111,15 +111,25 @@ export function TrackerCard({
     updatedWorkItemIds.size > 0 ||
     deletedWorkItemIds.size > 0;
   const hasPendingChanges = hasDraftChanges || editingWorkItemId !== null;
-  const workItems = isEditingWorkItems
+  const isWorkItemsEmpty =
+    committedWorkItems.length === 0 && deletedWorkItemIds.size === 0;
+  const workItemsEditMode =
+    isEditingWorkItems ||
+    (Boolean(actions?.onSaveWorkItems) && isWorkItemsEmpty);
+  const workItems = workItemsEditMode
     ? hasDraftChanges
       ? draftWorkItems
       : committedWorkItems
     : committedWorkItems;
   const canChangeWorkItemStatus = Boolean(
-    isEditingWorkItems &&
+    workItemsEditMode &&
       (actions?.onSaveWorkItems || actions?.onWorkItemStatusChange),
   );
+  const showWorkItemsDoneButton =
+    workItemsEditMode &&
+    (isWorkItemsEmpty
+      ? newItemTitle.trim().length > 0 || hasDraftChanges
+      : true);
 
   const enterWorkItemEditMode = () => {
     setDraftWorkItems(committedWorkItems);
@@ -416,38 +426,40 @@ export function TrackerCard({
             <p className="text-sm font-medium text-foreground">
               {labels.workItemsTitle}
             </p>
-            {actions?.onSaveWorkItems ? (
+            {actions?.onSaveWorkItems && showWorkItemsDoneButton ? (
               <Button
                 type="button"
-                variant={isEditingWorkItems ? "default" : "outline"}
+                variant="default"
                 size="sm"
                 disabled={
                   isSavingChanges ||
                   Boolean(editingWorkItemId && !editItemTitle.trim())
                 }
-                onClick={
-                  isEditingWorkItems
-                    ? () => void handleSaveChanges()
-                    : enterWorkItemEditMode
-                }
+                onClick={() => void handleSaveChanges()}
               >
                 {isSavingChanges ? (
                   <LoaderCircle className="size-3.5 animate-spin" />
-                ) : isEditingWorkItems ? (
-                  <Check className="size-3.5" />
                 ) : (
-                  <Pencil className="size-3.5" />
+                  <Check className="size-3.5" />
                 )}
-                {isSavingChanges
-                  ? labels.savingChanges
-                  : isEditingWorkItems
-                    ? labels.done
-                    : labels.edit}
+                {isSavingChanges ? labels.savingChanges : labels.done}
+              </Button>
+            ) : null}
+            {actions?.onSaveWorkItems && !workItemsEditMode ? (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={isSavingChanges}
+                onClick={enterWorkItemEditMode}
+              >
+                <Pencil className="size-3.5" />
+                {labels.edit}
               </Button>
             ) : null}
           </div>
 
-          {isEditingWorkItems && (
+          {workItemsEditMode ? (
             <div
               className="flex items-center gap-1.5 rounded-xl border border-primary/70 bg-background/85 p-2 shadow-[0_0_16px_color-mix(in_oklch,var(--primary)_25%,transparent)] ring-1 ring-primary/20"
               dir="rtl"
@@ -482,7 +494,7 @@ export function TrackerCard({
                 <Plus className="size-4" />
               </Button>
             </div>
-          )}
+          ) : null}
 
           <div
             className={cn(
@@ -490,12 +502,9 @@ export function TrackerCard({
               workItems.length > 0 && "divide-y divide-border/50",
             )}
           >
-            {workItems.length === 0 && !isEditingWorkItems ? (
-              <p
-                onClick={enterWorkItemEditMode}
-                className="cursor-pointer px-3 py-6 text-center text-sm text-muted-foreground transition-colors hover:text-foreground"
-              >
-                {labels.noWorkItems} (Click to add)
+            {workItems.length === 0 && !workItemsEditMode ? (
+              <p className="px-3 py-6 text-center text-sm text-muted-foreground">
+                {labels.noWorkItems}
               </p>
             ) : workItems.length === 0 ? null : (
               <ul
@@ -595,7 +604,7 @@ export function TrackerCard({
                         }
                         readOnly={!canChangeWorkItemStatus}
                       />
-                      {actions?.onSaveWorkItems && isEditingWorkItems ? (
+                      {actions?.onSaveWorkItems && workItemsEditMode ? (
                         <Button
                           type="button"
                           variant="ghost"
@@ -609,7 +618,7 @@ export function TrackerCard({
                           <Pencil className="size-3.5" />
                         </Button>
                       ) : null}
-                      {actions?.onSaveWorkItems && isEditingWorkItems ? (
+                      {actions?.onSaveWorkItems && workItemsEditMode ? (
                         <Button
                           type="button"
                           variant="ghost"
@@ -665,7 +674,7 @@ export function TrackerCard({
             )}
           </div>
 
-          {isEditingWorkItems ? (
+          {workItemsEditMode && !isWorkItemsEmpty ? (
             <div className="flex items-center justify-between gap-2 rounded-xl border border-primary/30 bg-primary/[0.05] p-2">
               <span className="px-1 text-xs text-muted-foreground">
                 {hasPendingChanges
