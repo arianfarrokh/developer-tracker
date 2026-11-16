@@ -8,6 +8,7 @@ function overlayFromCatalog(
     ...item,
     id: catalogItem.id,
     task: catalogItem.task ?? item.task,
+    description: catalogItem.description ?? item.description,
     goalId: catalogItem.goalId ?? item.goalId,
     count: catalogItem.count ?? item.count,
     workItemStatus: catalogItem.workItemStatus,

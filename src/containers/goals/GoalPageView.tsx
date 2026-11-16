@@ -9,6 +9,7 @@ import {
 } from "@/components/cards/tracker-card";
 import { useAlert } from "@/providers/alert-provider";
 import { useMutation, useQuery } from "@apollo/client/react";
+import { useRouter } from "next/navigation";
 import { useCallback, useMemo, useState } from "react";
 import {
   createWorkItemsMutation,
@@ -33,6 +34,7 @@ import EditGoalDialog from "./ui/EditGoalDialog";
 const SKELETON_COUNT = 6;
 
 export function GoalPageView() {
+  const router = useRouter();
   const { show, error: showError } = useAlert();
   const [isCreateGoalOpen, setIsCreateGoalOpen] = useState(false);
   const {
@@ -91,6 +93,7 @@ export function GoalPageView() {
                 goalId: trackerId,
                 workItems: created.map((item) => ({
                   task: item.task,
+                  description: item.description?.trim() || null,
                   count: item.count,
                   dueDate: item.dueDate?.toISOString() ?? null,
                   workItemStatus: item.workItemStatus as WorkItemStatusEnum,
@@ -116,6 +119,7 @@ export function GoalPageView() {
                 workItems: updated.map((item) => ({
                   id: item.workItemId,
                   task: item.task,
+                  description: item.description?.trim() || null,
                   goalId: trackerId,
                   count: item.count,
                   dueDate: item.dueDate?.toISOString() ?? null,
@@ -199,6 +203,7 @@ export function GoalPageView() {
             (item): TrackerCardWorkItem => ({
               id: item.id,
               task: item.task,
+              description: item.description,
               count: item.count,
               dueDate: item.dueDate,
               completedAt: item.completedAt,
@@ -304,6 +309,9 @@ export function GoalPageView() {
               workItemStatusOptions={GOAL_WORK_ITEM_STATUS_OPTIONS}
               actions={{
                 onSaveWorkItems: handleSaveWorkItems,
+                onWorkItemOpen: (workItemId, goalId) => {
+                  router.push(`/goals/${goalId}/work-item/${workItemId}`);
+                },
                 onEdit: (id) => setEditingGoalId(id),
                 onDelete: (id) => setSelectedGoalId(id),
               }}
@@ -312,6 +320,7 @@ export function GoalPageView() {
                 noWorkItems: "آیتمی ثبت نشده",
                 addWorkItem: "افزودن آیتم",
                 placeholder: "عنوان آیتم کاری...",
+                workItemDescriptionPlaceholder: "توضیحات (اختیاری)...",
                 creatingWorkItem: "در حال ایجاد آیتم",
                 saveWorkItem: "ذخیره تغییرات",
                 updatingWorkItem: "در حال ویرایش آیتم",

@@ -17,6 +17,7 @@ export const createGoalMutation: TypedDocumentNode<
         workItems {
           id
           task
+          description
           goalId
           count
           dueDate
@@ -37,6 +38,7 @@ export const createWorkItemsMutation: TypedDocumentNode<
       result {
         id
         task
+        description
         goalId
         count
         dueDate
@@ -61,6 +63,7 @@ export const updateWorkItemsMutation: TypedDocumentNode<
       result {
         id
         task
+        description
         goalId
         count
         dueDate
@@ -101,6 +104,7 @@ export const changeWorkItemStatusMutation: TypedDocumentNode<
       result {
         id
         task
+        description
         count
         dueDate
         completedAt
@@ -150,6 +154,7 @@ export const editGoalMutation: TypedDocumentNode<
         workItems {
           id
           task
+          description
           count
           dueDate
           workItemStatus

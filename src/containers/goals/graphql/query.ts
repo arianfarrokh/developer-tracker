@@ -8,6 +8,7 @@ export const AllWorkItemsQueryResult: TypedDocumentNode<{
     allWorkItems {
       id
       task
+      description
       goalId
       count
       dueDate
@@ -31,6 +32,7 @@ export const AllGoalsQueryResult: TypedDocumentNode<
       workItems {
         id
         task
+        description
         goalId
         count
         dueDate

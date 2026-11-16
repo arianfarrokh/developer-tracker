@@ -14,6 +14,7 @@ export function mapGoalToTrackerCard(
     workItems: goal.workItems.map((item) => ({
       id: item.id,
       task: item.task,
+      description: item.description,
       count: item.count,
       status: normalizeWorkItemStatus(item.workItemStatus),
       dueDate: item.dueDate,

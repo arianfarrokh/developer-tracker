@@ -1,6 +1,7 @@
 type GoalWorkItemQueryResultType = {
   id: ID;
   task: string;
+  description?: string | null;
   goalId: ID;
   count: number;
   dueDate: string | null;
@@ -28,6 +29,7 @@ type CreateGoalInput = {
 
 type CreateWorkItemDtoInput = {
   task: string;
+  description?: string | null;
   count: number;
   dueDate: string | null;
   workItemStatus: WorkItemStatusEnum;
@@ -48,6 +50,7 @@ type CreateWorkItemsMutationData = {
 type UpdateWorkItemDtoInput = {
   id: ID;
   task: string;
+  description?: string | null;
   goalId: ID;
   count: number;
   dueDate: string | null;

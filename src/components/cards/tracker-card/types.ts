@@ -4,6 +4,7 @@ import type { TrackerStatusOption } from "./status";
 export type TrackerCardWorkItem = {
   id: string;
   task: string;
+  description?: string | null;
   count?: number;
   status?: string;
   dueDate?: string | null;
@@ -23,6 +24,7 @@ export type TrackerCardData = {
 
 export type TrackerWorkItemDraftInput = {
   task: string;
+  description?: string | null;
   count: number;
   dueDate?: Date;
   workItemStatus: string;
@@ -56,6 +58,7 @@ export type TrackerCardActions = {
     parentId: string,
     workItemIndex: number,
   ) => void;
+  onWorkItemOpen?: (workItemId: string, goalId: string) => void;
 };
 
 export type TrackerCardLabels = {
@@ -67,6 +70,7 @@ export type TrackerCardLabels = {
   delete?: string;
   toggleWorkItem?: string;
   placeholder?: string;
+  workItemDescriptionPlaceholder?: string;
   creatingWorkItem?: string;
   saveWorkItem?: string;
   updatingWorkItem?: string;

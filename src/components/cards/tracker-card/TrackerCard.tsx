@@ -5,6 +5,7 @@ import * as React from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -32,6 +33,7 @@ import {
   DEFAULT_WORK_ITEM_STATUS_OPTIONS,
   priorityBadge,
 } from "./status";
+import { isUsableWorkItemId } from "@/containers/goals/workItemStatusApi";
 import type { TrackerCardProps, TrackerCardWorkItem } from "./types";
 import { WorkItemStatusSelect } from "./WorkItemStatusSelect";
 
@@ -43,6 +45,7 @@ const DEFAULT_LABELS = {
   delete: "Delete",
   toggleWorkItem: "Toggle complete",
   placeholder: "Add new work item...",
+  workItemDescriptionPlaceholder: "Optional notes...",
   creatingWorkItem: "Creating work item",
   saveWorkItem: "Save changes",
   updatingWorkItem: "Updating work item",
@@ -59,6 +62,11 @@ const DEFAULT_LABELS = {
 
 function clampProgress(value: number | undefined): number {
   return Math.min(100, Math.max(0, value ?? 0));
+}
+
+function normalizeWorkItemDescription(value: string | null | undefined): string | null {
+  const trimmed = value?.trim();
+  return trimmed ? trimmed : null;
 }
 
 export function TrackerCard({
@@ -100,6 +108,7 @@ export function TrackerCard({
     null,
   );
   const [editItemTitle, setEditItemTitle] = React.useState("");
+  const [editItemDescription, setEditItemDescription] = React.useState("");
   const [editItemDate, setEditItemDate] = React.useState<Date | undefined>();
   const [deleteCandidate, setDeleteCandidate] = React.useState<{
     id: string;
@@ -148,6 +157,7 @@ export function TrackerCard({
     const item: TrackerCardWorkItem = {
       id: draftId,
       task,
+      description: null,
       count: 1,
       dueDate: newItemDate?.toISOString() ?? null,
       status: "TODO",
@@ -171,6 +181,7 @@ export function TrackerCard({
     const task = editItemTitle.trim();
     if (!task || !editingWorkItemId || !actions?.onSaveWorkItems) return;
 
+    const description = normalizeWorkItemDescription(editItemDescription);
     beginDraft();
     setDraftWorkItems((current) =>
       (hasDraftChanges ? current : committedWorkItems).map((draftItem) =>
@@ -178,6 +189,7 @@ export function TrackerCard({
           ? {
               ...draftItem,
               task,
+              description,
               dueDate: editItemDate?.toISOString() ?? null,
             }
           : draftItem,
@@ -185,6 +197,7 @@ export function TrackerCard({
     );
     markItemUpdated(item.id);
     setEditingWorkItemId(null);
+    setEditItemDescription("");
   };
 
   const handleDraftStatusChange = (
@@ -259,6 +272,7 @@ export function TrackerCard({
             ? {
                 ...item,
                 task: editItemTitle.trim(),
+                description: normalizeWorkItemDescription(editItemDescription),
                 dueDate: editItemDate?.toISOString() ?? null,
               }
             : item,
@@ -280,6 +294,7 @@ export function TrackerCard({
           .filter((item) => createdWorkItemIds.has(item.id))
           .map((item) => ({
             task: item.task,
+            description: normalizeWorkItemDescription(item.description),
             count: item.count ?? 1,
             dueDate: toDate(item.dueDate),
             workItemStatus: item.status ?? "TODO",
@@ -289,6 +304,7 @@ export function TrackerCard({
           .map((item) => ({
             workItemId: item.id,
             task: item.task,
+            description: normalizeWorkItemDescription(item.description),
             count: item.count ?? 1,
             dueDate: toDate(item.dueDate),
             workItemStatus: item.status ?? "TODO",
@@ -327,6 +343,7 @@ export function TrackerCard({
     const dueDate = item.dueDate ? new Date(item.dueDate) : undefined;
     setEditingWorkItemId(workItemId);
     setEditItemTitle(item.task);
+    setEditItemDescription(item.description ?? "");
     setEditItemDate(
       dueDate && !Number.isNaN(dueDate.getTime()) ? dueDate : undefined,
     );
@@ -528,66 +545,119 @@ export function TrackerCard({
                     return (
                       <li
                         key={rowId}
-                        className="flex items-center gap-1.5 bg-primary/[0.04] p-2"
+                        className="flex flex-col gap-2 bg-primary/[0.04] p-2"
                         dir="rtl"
                       >
-                        <Input
-                          autoFocus
-                          value={editItemTitle}
-                          onChange={(event) =>
-                            setEditItemTitle(event.target.value)
-                          }
-                          onKeyDown={(event) => {
-                            if (event.key === "Enter") {
-                              event.preventDefault();
-                              handleUpdateItem(item);
+                        <div className="flex items-center gap-1.5">
+                          <Input
+                            autoFocus
+                            value={editItemTitle}
+                            onChange={(event) =>
+                              setEditItemTitle(event.target.value)
                             }
-                            if (event.key === "Escape") {
+                            onKeyDown={(event) => {
+                              if (event.key === "Enter") {
+                                event.preventDefault();
+                                handleUpdateItem(item);
+                              }
+                              if (event.key === "Escape") {
+                                setEditingWorkItemId(null);
+                                setEditItemDescription("");
+                              }
+                            }}
+                            disabled={isSavingChanges}
+                            className="h-8 min-w-0 flex-1 text-sm"
+                          />
+                          <DatePicker
+                            date={editItemDate}
+                            onSelect={setEditItemDate}
+                          />
+                          <Button
+                            type="button"
+                            size="icon-xs"
+                            className="size-8"
+                            disabled={!editItemTitle.trim() || isSavingChanges}
+                            aria-label={labels.saveWorkItem}
+                            title={labels.saveWorkItem}
+                            onClick={() => handleUpdateItem(item)}
+                          >
+                            <Check className="size-4" />
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon-xs"
+                            className="size-8"
+                            disabled={isSavingChanges}
+                            aria-label={labels.cancel}
+                            title={labels.cancel}
+                            onClick={() => {
                               setEditingWorkItemId(null);
-                            }
-                          }}
+                              setEditItemDescription("");
+                            }}
+                          >
+                            <X className="size-4" />
+                          </Button>
+                        </div>
+                        <Textarea
+                          value={editItemDescription}
+                          onChange={(event) =>
+                            setEditItemDescription(event.target.value)
+                          }
+                          placeholder={labels.workItemDescriptionPlaceholder}
                           disabled={isSavingChanges}
-                          className="h-8 min-w-0 flex-1 text-sm"
+                          rows={2}
+                          className="min-h-[3.25rem] resize-none border-border/70 bg-background/80 text-sm"
                         />
-                        <DatePicker
-                          date={editItemDate}
-                          onSelect={setEditItemDate}
-                        />
-                        <Button
-                          type="button"
-                          size="icon-xs"
-                          className="size-8"
-                          disabled={!editItemTitle.trim() || isSavingChanges}
-                          aria-label={labels.saveWorkItem}
-                          title={labels.saveWorkItem}
-                          onClick={() => handleUpdateItem(item)}
-                        >
-                          <Check className="size-4" />
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon-xs"
-                          className="size-8"
-                          disabled={isSavingChanges}
-                          aria-label={labels.cancel}
-                          title={labels.cancel}
-                          onClick={() => setEditingWorkItemId(null)}
-                        >
-                          <X className="size-4" />
-                        </Button>
                       </li>
                     );
                   }
+
+                  const canOpenWorkItem =
+                    !workItemsEditMode &&
+                    Boolean(actions?.onWorkItemOpen) &&
+                    isUsableWorkItemId(item.id) &&
+                    !item.id.startsWith("draft-");
 
                   return (
                     <li
                       key={rowId}
                       className="flex flex-wrap items-center gap-x-2 gap-y-1.5 px-3 py-2.5 text-sm sm:flex-nowrap"
                     >
-                      <span className="min-w-0 flex-1 truncate font-medium">
-                        {item.task}
-                      </span>
+                      <div
+                        className={cn(
+                          "min-w-0 flex-1",
+                          canOpenWorkItem &&
+                            "cursor-pointer rounded-md transition-colors hover:bg-muted/40",
+                        )}
+                        role={canOpenWorkItem ? "button" : undefined}
+                        tabIndex={canOpenWorkItem ? 0 : undefined}
+                        onClick={
+                          canOpenWorkItem
+                            ? () =>
+                                actions?.onWorkItemOpen?.(item.id, data.id)
+                            : undefined
+                        }
+                        onKeyDown={
+                          canOpenWorkItem
+                            ? (event) => {
+                                if (event.key === "Enter" || event.key === " ") {
+                                  event.preventDefault();
+                                  actions?.onWorkItemOpen?.(item.id, data.id);
+                                }
+                              }
+                            : undefined
+                        }
+                      >
+                        <span className="block truncate font-medium">
+                          {item.task}
+                        </span>
+                        {item.description?.trim() ? (
+                          <p className="line-clamp-1 text-xs text-muted-foreground">
+                            {item.description}
+                          </p>
+                        ) : null}
+                      </div>
                       <span className="shrink-0 tabular-nums text-xs text-muted-foreground">
                         {item.count ?? 0}
                       </span>
